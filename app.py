@@ -187,21 +187,34 @@ fx_rates = {
 }
 col1, col2, col3 = st.columns(3)
 with col1:
-    conv_imp = st.number_input(
-        "Conversion / impression", min_value=0.0, value=0.0001, format="%.8f"
+    conv_imp_pct = st.number_input(
+        "Conversion / impression (%)", min_value=0.0, max_value=100.0, value=0.01, format="%.4f"
     )
 with col2:
-    conv_view = st.number_input("Conversion / view", min_value=0.0, value=0.001, format="%.8f")
+    conv_view_pct = st.number_input(
+        "Conversion / view (%)", min_value=0.0, max_value=100.0, value=0.1, format="%.4f"
+    )
 with col3:
-    conv_click = st.number_input("Conversion / click", min_value=0.0, value=0.02, format="%.8f")
-conv_sigma = st.number_input("Conversion Sigma %", min_value=0.0, value=0.0, format="%.4f")
+    conv_click_pct = st.number_input(
+        "Conversion / click (%)", min_value=0.0, max_value=100.0, value=2.0, format="%.4f"
+    )
+conv_sigma_pct = st.number_input(
+    "Conversion Sigma (%)", min_value=0.0, max_value=1000.0, value=0.0, format="%.4f"
+)
 iterations = st.number_input(
     "Simulation iterations", min_value=100, max_value=10000, value=2000, step=100
 )
 
 if st.button("Run simulation", type="primary"):
     config = SimulationInputs(
-        conv_imp, conv_view, conv_click, conv_sigma, int(iterations), 42, target_currency, fx_rates
+        conv_imp_pct / 100,
+        conv_view_pct / 100,
+        conv_click_pct / 100,
+        conv_sigma_pct / 100,
+        int(iterations),
+        42,
+        target_currency,
+        fx_rates,
     )
     history = {
         inventory_id: [row for row in activation_map.values() if row.inventory_id == inventory_id]
