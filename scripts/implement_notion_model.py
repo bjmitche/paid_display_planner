@@ -22,22 +22,14 @@ MODEL: dict[str, dict[str, Any]] = {
         "Format": {"select": {"options": [
             {"name": "Display"}, {"name": "Video"}, {"name": "Native"}, {"name": "Other"}
         ]}},
-        "Active": {"checkbox": {}},
-        "Pricing Model": {"select": {"options": [
-            {"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "CPV"}, {"name": "Other"}
-        ]}},
-        "Manual Expected Cost": {"number": {"format": "number"}},
-        "Manual Expected Impressions": {"number": {"format": "number"}},
-        "Manual Expected View Rate": {"number": {"format": "number"}},
-        "Manual Expected CTR": {"number": {"format": "number"}},
-        "Manual Cost P25": {"number": {"format": "number"}},
-        "Manual Cost P75": {"number": {"format": "number"}},
-        "Manual Impressions P25": {"number": {"format": "number"}},
-        "Manual Impressions P75": {"number": {"format": "number"}},
-        "Manual View Rate P25": {"number": {"format": "number"}},
-        "Manual View Rate P75": {"number": {"format": "number"}},
-        "Manual CTR P25": {"number": {"format": "number"}},
-        "Manual CTR P75": {"number": {"format": "number"}},
+        "Expected Cost": {"number": {"format": "number"}},
+        "Expected Impressions": {"number": {"format": "number"}},
+        "Expected View Rate": {"number": {"format": "number"}},
+        "Expected CTR": {"number": {"format": "number"}},
+        "Cost Sigma %": {"number": {"format": "percent"}},
+        "Impressions Sigma %": {"number": {"format": "percent"}},
+        "View Rate Sigma %": {"number": {"format": "percent"}},
+        "CTR Sigma %": {"number": {"format": "percent"}},
     },
     "activations": {
         "Actual Cost": {"number": {"format": "number"}},
@@ -58,6 +50,26 @@ MODEL: dict[str, dict[str, Any]] = {
             {"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}
         ]}},
     },
+}
+
+
+REMOVE_PROPERTIES = {
+    "inventory": {
+        "Active",
+        "Pricing Model",
+        "Manual Expected Cost",
+        "Manual Expected Impressions",
+        "Manual Expected View Rate",
+        "Manual Expected CTR",
+        "Manual Cost P25",
+        "Manual Cost P75",
+        "Manual Impressions P25",
+        "Manual Impressions P75",
+        "Manual View Rate P25",
+        "Manual View Rate P75",
+        "Manual CTR P25",
+        "Manual CTR P75",
+    }
 }
 
 
@@ -98,18 +110,28 @@ def ensure_source(name: str, source_id: str) -> dict[str, Any]:
         for prop_name, definition in MODEL[name].items()
         if prop_name not in existing
     }
-    if additions:
-        request(f"/data_sources/{source_id}", method="PATCH", body={"properties": additions})
+    removals = {
+        prop_name: None
+        for prop_name in REMOVE_PROPERTIES.get(name, set())
+        if prop_name in existing and prop_name not in MODEL[name]
+    }
+    changes = {**additions, **removals}
+    if changes:
+        request(f"/data_sources/{source_id}", method="PATCH", body={"properties": changes})
     after = source_schema(source_id)
     after_names = set(after.get("properties", {}))
     missing = sorted(set(MODEL[name]) - after_names)
-    if missing:
-        raise RuntimeError(f"{name}: properties still missing after PATCH: {missing}")
+    still_present = sorted(set(removals) & after_names)
+    if missing or still_present:
+        raise RuntimeError(
+            f"{name}: schema update incomplete; missing={missing}, still_present={still_present}"
+        )
     return {
         "source": name,
         "source_id": source_id,
         "title": "".join(t.get("plain_text", "") for t in after.get("title", [])),
         "added": sorted(additions),
+        "removed": sorted(removals),
         "property_count": len(after_names),
         "required_model_fields_present": True,
     }

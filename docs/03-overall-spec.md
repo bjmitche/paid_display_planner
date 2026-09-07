@@ -115,22 +115,25 @@ The application should use sensible defaults but must expose the assumptions use
 
 ## 5. Inventory estimation
 
-### Zero-history rule
+### Zero historical activations
 
 If an Inventory item has zero eligible finished Activations:
 
 ```text
-Expected median = manual assumption
-P25 = manual P25
-P75 = manual P75
+Expected median = Inventory expected value
+Sigma = Inventory Sigma % fallback
+Method = Fallback assumption
 ```
 
-### Historical rule
+The Inventory expected values are only fallback inputs. They are not intended to duplicate historical estimates.
+
+### Historical activations
 
 If an Inventory item has eligible finished Activations:
 
 ```text
 Expected median = historical median
+Sigma = historical dispersion, subject to a minimum floor
 ```
 
 The metrics are:
@@ -142,17 +145,9 @@ The metrics are:
 
 ### Dispersion rule
 
-The dispersion is blended between manual and historical dispersion:
+For new or data-sparse Inventory, the stored Sigma % is the coefficient of variation used as the fallback dispersion. With enough historical Activations, historical dispersion takes precedence. A minimum dispersion floor prevents small samples from producing false certainty.
 
-```text
-Historical weight = MIN(1, eligible finished Activations / 6)
-Manual weight = 1 - historical weight
-```
-
-The model should use log-space treatment for positive skewed variables where appropriate. View rates, CTR, and conversion rates must remain bounded between zero and one.
-
-A minimum dispersion floor should prevent small samples from producing false certainty.
-
+The application may blend historical dispersion with the stored Sigma % while the historical sample is small, but it must not require P25/P75 fields in Notion.
 ## 6. Simulation model
 
 For each selected activation and each simulation iteration:
@@ -221,9 +216,7 @@ Rates must remain bounded:
 - Conversion rate per view.
 - Conversion rate per click.
 
-The first implementation may use a practical bounded approximation for rates. A beta distribution is a potential later improvement.
-
-Users should enter uncertainty as P25/P75 ranges where possible. The application should convert the range into simulation parameters internally.
+Users should enter uncertainty as a central value plus Sigma % where needed. Sigma % is coefficient of variation and is converted internally to the distribution parameters. Historical dispersion should override the Inventory fallback Sigma % when enough observations exist.
 
 ## 8. Results
 

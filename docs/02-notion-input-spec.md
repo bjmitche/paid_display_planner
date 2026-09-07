@@ -22,36 +22,41 @@ The Inventory data source describes a reusable placement or placement type from 
 
 ### Required Inventory properties
 
-| Application field | Suggested Notion property | Type | Required | Description |
+These are the only Inventory properties required by the planner itself:
+
+| Application field | Notion property | Type | Required | Description |
 |---|---|---:|---:|---|
-| Inventory ID | `Inventory ID` | Rich text or formula | Yes | Stable business identifier if available. Notion page ID remains the technical fallback. |
 | Inventory name | `Name` | Title | Yes | Human-readable placement name. |
-| Platform/channel | `Platform` | Select | Yes | Platform or channel. |
-| Format | `Format` | Select | Yes | Display, video, native, sponsored, or other agreed value. |
-| Active | `Active` | Checkbox or status | Yes | Whether the placement is available for planning. |
-| Pricing model | `Pricing model` | Select | Yes | Fixed, CPM, CPC, CPV, or other agreed model. |
-| Manual expected cost | `Manual expected cost` | Number | Yes for new inventory | Initial expected cost when no historical activation exists. |
-| Manual expected impressions | `Manual expected impressions` | Number | Yes for new inventory | Initial expected impressions/reach assumption. |
-| Manual expected view rate | `Manual expected view rate` | Number | Video only | Initial video view-rate assumption as a proportion. |
-| Manual expected CTR | `Manual expected CTR` | Number | Yes | Initial CTR assumption as a proportion. |
-| Manual cost P25 | `Manual cost P25` | Number | Yes for new inventory | Lower-quartile cost assumption. |
-| Manual cost P75 | `Manual cost P75` | Number | Yes for new inventory | Upper-quartile cost assumption. |
-| Manual impressions P25 | `Manual impressions P25` | Number | Yes for new inventory | Lower-quartile impressions assumption. |
-| Manual impressions P75 | `Manual impressions P75` | Number | Yes for new inventory | Upper-quartile impressions assumption. |
-| Manual view-rate P25 | `Manual view-rate P25` | Number | Video only | Lower-quartile view-rate assumption. |
-| Manual view-rate P75 | `Manual view-rate P75` | Number | Video only | Upper-quartile view-rate assumption. |
-| Manual CTR P25 | `Manual CTR P25` | Number | Yes | Lower-quartile CTR assumption. |
-| Manual CTR P75 | `Manual CTR P75` | Number | Yes | Upper-quartile CTR assumption. |
+| Format | `Format` | Select | Yes | Display, video, native, or other. |
+| Expected cost | `Expected Cost` | Number | New/no-history fallback | Central assumed cost when historical data is unavailable. |
+| Expected impressions | `Expected Impressions` | Number | New/no-history fallback | Central assumed impressions/reach when historical data is unavailable. |
+| Expected view rate | `Expected View Rate` | Number | Video/no-history fallback | Central assumed view rate as a decimal proportion. |
+| Expected CTR | `Expected CTR` | Number | New/no-history fallback | Central assumed CTR as a decimal proportion. |
+| Cost sigma | `Cost Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
+| Impressions sigma | `Impressions Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
+| View-rate sigma | `View Rate Sigma %` | Number | Video/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
+| CTR sigma | `CTR Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
 
-### Optional Inventory properties
+The planner does not require Inventory-level historical expected values. When eligible finished Activations exist, the application calculates the central performance estimate from historical data. Inventory values above provide the fallback for new or data-sparse placements.
 
-| Application field | Suggested Notion property | Type | Description |
-|---|---|---:|---|
-| Currency | `Currency` | Select | Currency for cost and flow values. |
-| Minimum spend | `Minimum spend` | Number | Minimum cost constraint. |
-| Typical activation duration | `Duration` | Number or rich text | Context for interpreting historical performance. |
-| Notes | `Notes` | Rich text | Operational notes or caveats. |
-| Video eligible | `Video eligible` | Checkbox | Explicitly identifies whether view rate applies. |
+Existing operational Inventory properties such as `Channel`, `List Price`, `Price Currency`, `Minimum Period`, `Last Updated`, `Publishers & Brokers`, and `Targeted` may remain in Notion, but they are not required by the planner MVP.
+
+### Sigma convention
+
+`Sigma %` means coefficient of variation, not the lognormal sigma parameter:
+
+```text
+Sigma % = standard deviation / mean
+```
+
+For example, `25%` is stored as `0.25` if the Notion field uses a decimal percentage format. For a lognormal draw, the application converts it internally:
+
+```text
+sigma_log = sqrt(LN(1 + (Sigma %)^2))
+```
+
+Historical dispersion takes precedence when there is enough data. The Inventory sigma values are fallback assumptions for new or sparse placements.
+
 
 ## Campaign data source
 
@@ -165,10 +170,9 @@ Flows = conversions × average purchase amount
 For an Inventory item with zero eligible finished Activations:
 
 ```text
-Median = manual expected value
-P25 = manual P25
-P75 = manual P75
-Method = Manual assumption
+Median = Inventory Expected value
+Sigma = Inventory Sigma % fallback
+Method = Fallback assumption
 ```
 
 ### Historical activations
@@ -177,16 +181,12 @@ For an Inventory item with one or more eligible finished Activations:
 
 ```text
 Median = historical median
+Sigma = historical dispersion, subject to a minimum floor
 ```
 
-Dispersion is blended according to the number of eligible historical Activations:
+Historical dispersion takes precedence as the sample becomes credible. The Inventory Sigma % is the fallback for new or data-sparse placements and may be blended while the sample is small.
 
-```text
-Historical weight = MIN(1, eligible activation count / 6)
-Manual weight = 1 - historical weight
-```
-
-The implementation may use log-space blending for positive metrics such as cost and impressions. Rate metrics must remain within valid bounds.
+The application must not require P25/P75 fields in Notion.
 
 ### Minimum dispersion
 
@@ -202,7 +202,7 @@ Conversion rates are not required to be stored in Notion for the MVP. They are e
 - Conversion rate per view.
 - Conversion rate per click.
 
-Each input may have a central value and optional P25/P75 uncertainty range.
+Each input may have a central value and an optional Sigma % representing coefficient of variation. The application should use the same Sigma convention as Inventory.
 
 The MVP assumption is that these rates are incremental and additive:
 

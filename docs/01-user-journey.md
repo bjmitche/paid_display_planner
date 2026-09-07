@@ -79,11 +79,9 @@ For each selected inventory item, the application displays:
 - Expected impressions/reach.
 - Expected view rate, where applicable.
 - Expected CTR.
-- Expected views.
-- Expected clicks.
 - Historical activation count.
-- Estimation method: manual, blended, or historical.
-- P25, median, and P75 where available.
+- Estimation method: fallback assumption, blended, or historical.
+- Q1, median, and Q3 where available.
 
 For the selected product, the application displays:
 
