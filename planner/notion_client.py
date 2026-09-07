@@ -186,7 +186,5 @@ def client_from_environment() -> NotionClient:
         activations_id=os.environ.get(
             "ACTIVATIONS_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_IDS["activations"]
         ),
-        products_id=os.environ.get(
-            "PRODUCTS_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_IDS["products"]
-        ),
+        products_id=os.environ.get("PRODUCTS_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_IDS["products"]),
     )
