@@ -22,10 +22,8 @@ Evidence:
 - Products: 58 rows.
 - Latest verified commit before this work: `79a1067`.
 
-## In Progress
-
-- [ ] Build the first functional campaign-first planner vertical slice.
-- [ ] Integrate the pure data/economics modules into the Streamlit app.
+- [ ] Add activation-level parameter table and per-activation Product selection.
+- [ ] Add Inventory-based scenario Activations without Notion write-back.
 
 ## Done
 

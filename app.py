@@ -3,7 +3,10 @@ import os
 import pandas as pd
 import streamlit as st
 
+from planner.fx import CURRENCIES, fetch_fx_rates
 from planner.models import (
+    Activation,
+    Product,
     normalise_activation,
     normalise_campaign,
     normalise_inventory,
@@ -44,9 +47,30 @@ def load_data():
     return campaigns, inventories, activations, products
 
 
+def add_scenario_activation(inventory, number: int) -> Activation:
+    return Activation(
+        f"scenario:{inventory.id}:{number}",
+        f"Scenario — {inventory.name} #{number}",
+        "Scenario",
+        inventory.id,
+        None,
+        inventory.expected_cost,
+        "EUR",
+        None,
+        None,
+        None,
+    )
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def cached_fx_rates(target_currency: str):
+    return fetch_fx_rates(target_currency, CURRENCIES)
+
+
 st.title("Paid Display Planner")
 st.caption(
-    "Campaign-first planning with historical performance expectations and Monte Carlo simulation."
+    "Campaign-first planning. Existing Campaign Activations are the base; added "
+    "Inventory rows are scenario-only."
 )
 
 with st.sidebar:
@@ -54,58 +78,113 @@ with st.sidebar:
     if st.button("Load Campaigns and Activations"):
         try:
             st.session_state["planner_data"] = load_data()
+            st.session_state.pop("scenario_activations", None)
             st.success("Notion data loaded.")
         except Exception as exc:
             st.error(f"Notion load failed: {exc}")
-
-    st.header("MVP status")
-    st.write("✅ Notion schema and live read verification")
-    st.write("✅ Campaign → Activations loading")
-    st.write("✅ Monte Carlo engine")
-    st.write("⏳ Production deployment smoke test")
+    st.write("✅ Campaign → Activations")
+    st.write("✅ Activation-level Products")
+    st.write("✅ Scenario Inventory additions")
 
 if "planner_data" not in st.session_state:
     st.info("Click **Load Campaigns and Activations** to begin.")
     st.stop()
 
-campaigns, inventories, activations, products = st.session_state["planner_data"]
+campaigns, inventories, activation_map, products = st.session_state["planner_data"]
 if not campaigns:
     st.error("No Campaigns were returned from Notion.")
     st.stop()
 
 st.subheader("2. Select campaign")
 campaign = st.selectbox("Campaign", campaigns, format_func=lambda item: item.name)
-related, missing = (
-    [activations[item_id] for item_id in campaign.activation_ids if item_id in activations],
-    [item_id for item_id in campaign.activation_ids if item_id not in activations],
+base_ids = [item_id for item_id in campaign.activation_ids if item_id in activation_map]
+scenario_activations = st.session_state.setdefault("scenario_activations", [])
+all_activation_map = {**activation_map, **{item.id: item for item in scenario_activations}}
+
+st.subheader("3. Add scenario activations")
+scenario_inventory = st.selectbox(
+    "Add an Inventory item", list(inventories.values()), format_func=lambda item: item.name
 )
-if missing:
-    st.warning(f"{len(missing)} Campaign Activation relation(s) could not be resolved.")
-if not related:
-    st.warning("This Campaign has no resolvable Activations.")
+if st.button("Add Inventory item to scenario"):
+    next_number = (
+        sum(item.inventory_id == scenario_inventory.id for item in scenario_activations) + 1
+    )
+    scenario_activations.append(add_scenario_activation(scenario_inventory, next_number))
+    st.rerun()
+
+available_ids = base_ids + [item.id for item in scenario_activations]
+selected_ids = st.multiselect(
+    "Activations included in this scenario",
+    available_ids,
+    default=available_ids,
+    format_func=lambda item_id: all_activation_map[item_id].name,
+)
+selected = [all_activation_map[item_id] for item_id in selected_ids]
+
+st.subheader("4. Activation parameters and Products")
+product_options = list(products.values())
+product_names = [item.name for item in product_options]
+product_by_activation: dict[str, Product] = {}
+activation_rows = []
+for activation in selected:
+    inventory = inventories.get(activation.inventory_id)
+    default_product_id = activation.product_id or (
+        product_options[0].id if product_options else None
+    )
+    default_index = next(
+        (i for i, item in enumerate(product_options) if item.id == default_product_id), 0
+    )
+    chosen_product = st.selectbox(
+        f"Product for {activation.name}",
+        product_names,
+        index=default_index,
+        key=f"product_{activation.id}",
+    )
+    product = product_options[product_names.index(chosen_product)]
+    product_by_activation[activation.id] = product
+    activation_rows.append(
+        {
+            "Activation": activation.name,
+            "Source": "Scenario" if activation.id.startswith("scenario:") else "Notion Campaign",
+            "Inventory": inventory.name if inventory else "Missing",
+            "Pricing Model": inventory.pricing_model if inventory else None,
+            "Cost": activation.cost,
+            "Currency": activation.currency,
+            "Expected Impressions": inventory.expected_impressions if inventory else None,
+            "Expected View Rate": inventory.expected_view_rate if inventory else None,
+            "Expected CTR": inventory.expected_ctr if inventory else None,
+            "Product": product.name,
+            "LTV": product.ltv,
+            "Average Purchase Amount": product.average_purchase_amount,
+            "Product Currency": product.currency,
+        }
+    )
+st.dataframe(pd.DataFrame(activation_rows), use_container_width=True, hide_index=True)
+
+if not selected or not product_options:
     st.stop()
 
-activation_labels = {item.id: f"{item.name} ({item.status or 'No status'})" for item in related}
-selected_ids = st.multiselect(
-    "Activations",
-    list(activation_labels),
-    default=list(activation_labels),
-    format_func=activation_labels.get,
-)
-selected = [activations[item_id] for item_id in selected_ids]
-
-product = st.selectbox("Product", list(products.values()), format_func=lambda item: item.name)
-target_currency = st.selectbox("Target currency", ["EUR", "GBP", "USD"], index=0)
-st.caption("Enter FX rates from each non-target source currency into the target currency.")
+st.subheader("5. Campaign assumptions")
+target_currency = st.selectbox("Target currency", list(CURRENCIES))
+try:
+    preloaded_fx_rates, fx_date = cached_fx_rates(target_currency)
+    st.caption(
+        f"FX rates pre-loaded from Frankfurter/ECB reference rates dated {fx_date}; "
+        "values remain editable."
+    )
+except Exception as exc:
+    preloaded_fx_rates = {}
+    st.warning(f"Could not pre-load FX rates: {exc}. Enter them manually.")
 fx_rates = {
     currency: st.number_input(
-        f"{currency} → {target_currency}", min_value=0.000001, value=1.0, key=f"fx_{currency}"
+        f"{currency} → {target_currency}",
+        min_value=0.000001,
+        value=preloaded_fx_rates.get(currency, 1.0),
+        key=f"fx_{currency}_{target_currency}",
     )
-    for currency in ["EUR", "GBP", "USD"]
+    for currency in CURRENCIES
     if currency != target_currency
 }
-
-st.subheader("3. Conversion assumptions")
 col1, col2, col3 = st.columns(3)
 with col1:
     conv_imp = st.number_input(
@@ -121,25 +200,28 @@ iterations = st.number_input(
 )
 
 if st.button("Run simulation", type="primary"):
-    input_config = SimulationInputs(
+    config = SimulationInputs(
         conv_imp, conv_view, conv_click, conv_sigma, int(iterations), 42, target_currency, fx_rates
     )
-    inventory_history = {
-        inventory_id: [row for row in activations.values() if row.inventory_id == inventory_id]
+    history = {
+        inventory_id: [row for row in activation_map.values() if row.inventory_id == inventory_id]
         for inventory_id in inventories
     }
-    activation_summaries = []
     campaign_rows = []
+    summaries = []
     for activation in selected:
         inventory = inventories.get(activation.inventory_id)
         if not inventory:
-            st.warning(f"Inventory relation missing for {activation.name}.")
             continue
         rows = simulate_activation(
-            activation, inventory, inventory_history.get(inventory.id, []), product, input_config
+            activation,
+            inventory,
+            history.get(inventory.id, []),
+            product_by_activation[activation.id],
+            config,
         )
         summary = summarise(rows)
-        activation_summaries.append(
+        summaries.append(
             {
                 "Activation": activation.name,
                 **{
@@ -150,18 +232,14 @@ if st.button("Run simulation", type="primary"):
             }
         )
         campaign_rows.extend(rows)
-    if campaign_rows:
-        st.subheader("Activation results")
-        st.dataframe(pd.DataFrame(activation_summaries), use_container_width=True, hide_index=True)
-        st.subheader("Campaign results")
-        campaign_summary = summarise(campaign_rows)
-        st.dataframe(
-            pd.DataFrame(
-                [{"Metric": metric, **values} for metric, values in campaign_summary.items()]
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
-        chart_data = pd.DataFrame(campaign_rows)[["conversions", "flows", "roi"]]
-        st.subheader("Campaign distributions")
-        st.line_chart(chart_data)
+    st.subheader("Activation results")
+    st.dataframe(pd.DataFrame(summaries), use_container_width=True, hide_index=True)
+    st.subheader("Campaign results")
+    st.dataframe(
+        pd.DataFrame(
+            [{"Metric": metric, **values} for metric, values in summarise(campaign_rows).items()]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.line_chart(pd.DataFrame(campaign_rows)[["conversions", "flows", "roi"]])
