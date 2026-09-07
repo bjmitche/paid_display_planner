@@ -157,25 +157,29 @@ for activation in selected:
         key=f"product_{activation.id}",
     )
     product = product_options[product_names.index(chosen_product)]
-    purchase_amount = st.number_input(
-        "Average purchase amount",
-        min_value=0.0,
-        value=float(product.average_purchase_amount or 0.0),
-        key=f"purchase_{activation.id}",
-    )
-    margin_pct = st.number_input(
-        "Gross margin (% of assets)",
-        min_value=0.0,
-        max_value=100.0,
-        value=float((getattr(product, "gross_margin_pct", None) or 0.0) * 100),
-        key=f"margin_{activation.id}",
-    )
-    holding_period = st.number_input(
-        "Expected holding period (years)",
-        min_value=0.0,
-        value=float(product.holding_period or 0.0),
-        key=f"holding_{activation.id}",
-    )
+    product_cols = card.columns(3)
+    with product_cols[0]:
+        purchase_amount = st.number_input(
+            "Average purchase amount",
+            min_value=0.0,
+            value=float(product.average_purchase_amount or 0.0),
+            key=f"purchase_{activation.id}",
+        )
+    with product_cols[1]:
+        margin_pct = st.number_input(
+            "Gross margin (% of assets)",
+            min_value=0.0,
+            max_value=100.0,
+            value=float((getattr(product, "gross_margin_pct", None) or 0.0) * 100),
+            key=f"margin_{activation.id}",
+        )
+    with product_cols[2]:
+        holding_period = st.number_input(
+            "Expected holding period (years)",
+            min_value=0.0,
+            value=float(product.holding_period or 0.0),
+            key=f"holding_{activation.id}",
+        )
     holding_years = holding_period
     product = Product(
         product.id,
@@ -187,8 +191,8 @@ for activation in selected:
         holding_period,
     )
     product_by_activation[activation.id] = product
-    st.markdown(f"**{activation.name} — activation inputs**")
-    input_cols = st.columns(4)
+    card.markdown(f"**{activation.name} — conversion assumptions**")
+    input_cols = card.columns(4)
     with input_cols[0]:
         imp_pct = st.number_input(
             "Conversion / impression (%)",
