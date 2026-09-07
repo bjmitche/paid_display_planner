@@ -4,8 +4,7 @@ import json
 import os
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, NamedTuple
 
 NOTION_API_BASE = "https://api.notion.com/v1"
 NOTION_VERSION = "2025-09-03"
@@ -65,8 +64,7 @@ REQUIRED_PROPERTIES: dict[str, dict[str, str]] = {
 }
 
 
-@dataclass(frozen=True)
-class DataSourceResult:
+class DataSourceResult(NamedTuple):
     key: str
     data_source_id: str
     title: str

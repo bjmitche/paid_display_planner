@@ -167,7 +167,7 @@ for activation in selected:
         "Gross margin (% of assets)",
         min_value=0.0,
         max_value=100.0,
-        value=float((product.gross_margin_pct or 0.0) * 100),
+        value=float((getattr(product, "gross_margin_pct", None) or 0.0) * 100),
         key=f"margin_{activation.id}",
     )
     holding_period = st.number_input(
@@ -179,7 +179,7 @@ for activation in selected:
     holding_unit = st.selectbox(
         "Holding period unit",
         ["Months", "Years"],
-        index=0 if product.holding_period_unit == "Months" else 1,
+        index=0 if getattr(product, "holding_period_unit", None) == "Months" else 1,
         key=f"holding_unit_{activation.id}",
     )
     holding_years = holding_period / 12 if holding_unit == "Months" else holding_period
@@ -255,7 +255,7 @@ for activation in selected:
             "Product Currency": product.currency,
         }
     )
-st.dataframe(pd.DataFrame(activation_rows), use_container_width=True, hide_index=True)
+st.dataframe(pd.DataFrame(activation_rows), width="stretch", hide_index=True)
 
 if not selected or not product_options:
     st.stop()
@@ -327,13 +327,13 @@ if st.button("Run simulation", type="primary"):
         )
         campaign_rows.extend(rows)
     st.subheader("Activation results")
-    st.dataframe(pd.DataFrame(summaries), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(summaries), width="stretch", hide_index=True)
     st.subheader("Campaign results")
     st.dataframe(
         pd.DataFrame(
             [{"Metric": metric, **values} for metric, values in summarise(campaign_rows).items()]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     st.line_chart(pd.DataFrame(campaign_rows)[["conversions", "flows", "roi"]])
