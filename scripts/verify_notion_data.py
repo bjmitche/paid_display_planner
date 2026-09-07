@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify that the Notion data model is readable and complete for the app."""
+
 from __future__ import annotations
 
 import json
