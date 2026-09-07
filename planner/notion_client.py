@@ -52,7 +52,6 @@ REQUIRED_PROPERTIES: dict[str, dict[str, str]] = {
     "products": {
         "Name": "title",
         "Average Purchase Amount": "number",
-        "LTV": "number",
         "Gross Margin %": "number",
         "Holding Period": "number",
         "Net Margin Bps": "number",

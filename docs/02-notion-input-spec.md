@@ -145,8 +145,13 @@ The Products data source provides the commercial assumptions used to value conve
 | Average purchase amount | `Average Purchase Amount` | Number | Yes | Pre-loaded product assumption; editable in the app. |
 | Gross margin | `Gross Margin %` | Number | Yes | Gross margin as a percentage of assets; editable in the app. |
 | Holding period (years) | `Holding Period` | Number | Yes | Pre-loaded expected holding period in years; editable in the app. |
-| LTV | `LTV` | Number | Optional | Stored reference value; the app derives an overridden LTV from the editable product parameters. |
-| Currency | `Currency` | Select | Recommended | Currency for purchase amount and LTV. |
+| Currency | `Currency` | Select | Recommended | Currency for purchase amount and derived LTV. |
+
+LTV is derived in the app and is not stored as a Products column. The app calculates:
+
+```text
+LTV = average purchase amount × gross margin % × holding period in years
+```
 
 ### Product calculation rule
 

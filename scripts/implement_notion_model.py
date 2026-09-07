@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Idempotently add the Paid Display Planner fields to existing Notion data sources."""
+
 from __future__ import annotations
 
 import json
@@ -19,12 +20,21 @@ DATA_SOURCES = {
 
 MODEL: dict[str, dict[str, Any]] = {
     "inventory": {
-        "Format": {"select": {"options": [
-            {"name": "Display"}, {"name": "Video"}, {"name": "Native"}, {"name": "Other"}
-        ]}},
-        "Pricing Model": {"select": {"options": [
-            {"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "Other"}
-        ]}},
+        "Format": {
+            "select": {
+                "options": [
+                    {"name": "Display"},
+                    {"name": "Video"},
+                    {"name": "Native"},
+                    {"name": "Other"},
+                ]
+            }
+        },
+        "Pricing Model": {
+            "select": {
+                "options": [{"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "Other"}]
+            }
+        },
         "Expected Cost": {"number": {"format": "number"}},
         "Expected Impressions": {"number": {"format": "number"}},
         "Expected View Rate": {"number": {"format": "number"}},
@@ -42,13 +52,12 @@ MODEL: dict[str, dict[str, Any]] = {
     },
     "products": {
         "Average Purchase Amount": {"number": {"format": "number"}},
-        "LTV": {"number": {"format": "number"}},
         "Gross Margin %": {"number": {"format": "percent"}},
         "Holding Period": {"number": {"format": "number"}},
         "Net Margin Bps": {"number": {"format": "number"}},
-        "Value Currency": {"select": {"options": [
-            {"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}
-        ]}},
+        "Value Currency": {
+            "select": {"options": [{"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}]}
+        },
     },
 }
 
@@ -77,6 +86,7 @@ REMOVE_PROPERTIES = {
         "Manual Expected Cost",
     },
     "products": {
+        "LTV",
         "Expected Holding Period",
         "Expected Holding Period Unit",
         "Holding Period Unit",
