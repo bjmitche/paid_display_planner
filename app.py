@@ -142,6 +142,42 @@ for activation in selected:
         key=f"product_{activation.id}",
     )
     product = product_options[product_names.index(chosen_product)]
+    purchase_amount = st.number_input(
+        "Average purchase amount",
+        min_value=0.0,
+        value=float(product.average_purchase_amount or 0.0),
+        key=f"purchase_{activation.id}",
+    )
+    margin_pct = st.number_input(
+        "Gross margin (% of assets)",
+        min_value=0.0,
+        max_value=100.0,
+        value=float((product.gross_margin_pct or 0.0) * 100),
+        key=f"margin_{activation.id}",
+    )
+    holding_period = st.number_input(
+        "Expected holding period",
+        min_value=0.0,
+        value=float(product.holding_period or 0.0),
+        key=f"holding_{activation.id}",
+    )
+    holding_unit = st.selectbox(
+        "Holding period unit",
+        ["Months", "Years"],
+        index=0 if product.holding_period_unit == "Months" else 1,
+        key=f"holding_unit_{activation.id}",
+    )
+    holding_years = holding_period / 12 if holding_unit == "Months" else holding_period
+    product = Product(
+        product.id,
+        product.name,
+        purchase_amount,
+        purchase_amount * (margin_pct / 100) * holding_years,
+        product.currency,
+        margin_pct / 100,
+        holding_period,
+        holding_unit,
+    )
     product_by_activation[activation.id] = product
     st.markdown(f"**{activation.name} — activation inputs**")
     input_cols = st.columns(4)

@@ -82,6 +82,9 @@ class Product:
     average_purchase_amount: float | None
     ltv: float | None
     currency: str | None
+    gross_margin_pct: float | None = None
+    holding_period: float | None = None
+    holding_period_unit: str | None = None
 
 
 def _number(value: Any) -> float | None:
@@ -141,6 +144,9 @@ def normalise_product(page: dict[str, Any]) -> Product:
         _number(p.get("Average Purchase Amount")),
         _number(p.get("LTV")),
         p.get("Value Currency"),
+        _number(p.get("Gross Margin %")) or (_number(p.get("Net Margin Bps")) or 0.0) / 10000,
+        _number(p.get("Expected Holding Period")) or _number(p.get("Holding Period")),
+        p.get("Expected Holding Period Unit") or p.get("Holding Period Unit"),
     )
 
 

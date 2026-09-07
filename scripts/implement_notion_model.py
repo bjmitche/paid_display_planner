@@ -43,6 +43,11 @@ MODEL: dict[str, dict[str, Any]] = {
     "products": {
         "Average Purchase Amount": {"number": {"format": "number"}},
         "LTV": {"number": {"format": "number"}},
+        "Gross Margin %": {"number": {"format": "percent"}},
+        "Expected Holding Period": {"number": {"format": "number"}},
+        "Expected Holding Period Unit": {"select": {"options": [
+            {"name": "Months"}, {"name": "Years"}
+        ]}},
         "Holding Period": {"number": {"format": "number"}},
         "Holding Period Unit": {"select": {"options": [
             {"name": "Months"}, {"name": "Years"}

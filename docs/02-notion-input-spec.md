@@ -142,22 +142,20 @@ The Products data source provides the commercial assumptions used to value conve
 | Product ID | `Product ID` | Rich text or formula | Yes | Stable business identifier if available. |
 | Product name | `Name` | Title | Yes | Human-readable product name. |
 | Active | `Active` | Checkbox or status | Recommended | Whether the product can be selected. |
-| Average purchase amount | `Average purchase amount` | Number | Yes for flow modelling | Average amount associated with a conversion. |
-| LTV | `LTV` | Number | Yes | Deterministic value per conversion used for campaign ROI. |
-| Holding period | `Holding period` | Number | Recommended | Product-level supporting attribute. |
-| Holding period unit | `Holding period unit` | Select | Recommended | Months or years. |
-| Net margin bps | `Net margin bps` | Number | Recommended | Supporting product-level margin assumption. |
+| Average purchase amount | `Average Purchase Amount` | Number | Yes | Pre-loaded product assumption; editable in the app. |
+| Gross margin | `Gross Margin %` | Number | Yes | Gross margin as a percentage of assets; editable in the app. |
+| Expected holding period | `Expected Holding Period` | Number | Yes | Pre-loaded expected holding period; editable in the app. |
+| Expected holding period unit | `Expected Holding Period Unit` | Select | Yes | Months or Years. |
+| LTV | `LTV` | Number | Optional | Stored reference value; the app derives an overridden LTV from the editable product parameters. |
 | Currency | `Currency` | Select | Recommended | Currency for purchase amount and LTV. |
 
 ### Product calculation rule
 
-The application uses the stored Product `LTV` directly:
+The app pre-loads the Product parameters and allows an in-app override. The overridden LTV is calculated as:
 
 ```text
-LTV value = conversions × product LTV
+LTV = average purchase amount × gross margin % × holding period in years
 ```
-
-The application must not multiply LTV by holding period or net margin again. Holding period and margin are retained as supporting attributes for transparency and future LTV governance.
 
 Flows are calculated separately:
 
