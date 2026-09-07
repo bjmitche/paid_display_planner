@@ -143,7 +143,7 @@ def normalise_product(page: dict[str, Any]) -> Product:
         _number(p.get("Average Purchase Amount")),
         _number(p.get("LTV")),
         p.get("Value Currency"),
-        _number(p.get("Gross Margin %")) or (_number(p.get("Net Margin Bps")) or 0.0) / 10000,
+        _number(p.get("Gross Margin %")),
         _number(p.get("Holding Period")),
     )
 
