@@ -22,17 +22,19 @@ MODEL: dict[str, dict[str, Any]] = {
         "Format": {"select": {"options": [
             {"name": "Display"}, {"name": "Video"}, {"name": "Native"}, {"name": "Other"}
         ]}},
+        "Pricing Model": {"select": {"options": [
+            {"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "Other"}
+        ]}},
         "Expected Cost": {"number": {"format": "number"}},
         "Expected Impressions": {"number": {"format": "number"}},
         "Expected View Rate": {"number": {"format": "number"}},
         "Expected CTR": {"number": {"format": "number"}},
-        "Cost Sigma %": {"number": {"format": "percent"}},
         "Impressions Sigma %": {"number": {"format": "percent"}},
         "View Rate Sigma %": {"number": {"format": "percent"}},
         "CTR Sigma %": {"number": {"format": "percent"}},
     },
     "activations": {
-        "Actual Cost": {"number": {"format": "number"}},
+        "Cost": {"number": {"format": "number"}},
         "Actual Impressions": {"number": {"format": "number"}},
         "Actual Video Views": {"number": {"format": "number"}},
         "Actual Clicks": {"number": {"format": "number"}},
@@ -69,7 +71,13 @@ REMOVE_PROPERTIES = {
         "Manual View Rate P75",
         "Manual CTR P25",
         "Manual CTR P75",
-    }
+        "Cost Sigma %",
+    },
+    "activations": {
+        "Expected Cost",
+        "Actual Cost",
+        "Manual Expected Cost",
+    },
 }
 
 

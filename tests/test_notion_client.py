@@ -6,7 +6,8 @@ def test_required_model_is_explicit() -> None:
     assert REQUIRED_PROPERTIES["campaigns"]["Activations"] == "relation"
     assert REQUIRED_PROPERTIES["inventory"]["Expected CTR"] == "number"
     assert REQUIRED_PROPERTIES["inventory"]["CTR Sigma %"] == "number"
-    assert REQUIRED_PROPERTIES["activations"]["Actual Impressions"] == "number"
+    assert REQUIRED_PROPERTIES["activations"]["Cost"] == "number"
+    assert "Actual Cost" not in REQUIRED_PROPERTIES["activations"]
     assert REQUIRED_PROPERTIES["products"]["LTV"] == "number"
 
 

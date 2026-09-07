@@ -105,9 +105,11 @@ The campaign planner must support the following sequence:
 7. Enter conversion rate per impression.
 8. Enter conversion rate per view.
 9. Enter conversion rate per click.
-10. Optionally enter P25/P75 uncertainty for each conversion rate.
+10. Optionally enter Sigma % for each conversion rate.
 11. Set the simulation iteration count.
-12. Optionally set a random seed for reproducible testing.
+12. Select a target currency.
+13. Enter any required source-currency-to-target-currency FX rates.
+14. Optionally set a random seed for reproducible testing.
 
 Inventory is used to supply performance assumptions for the pre-loaded Activations. The normal user journey begins with Campaign selection, not with manually browsing all Inventory.
 
@@ -179,6 +181,32 @@ Views = 0
 
 unless the placement explicitly supports a separate engagement measure.
 
+### Cost calculations
+
+Cost is deterministic; there is no cost Sigma.
+
+The related Inventory `Pricing Model` determines how the single Activation `Cost` value is interpreted:
+
+```text
+Fixed: total cost = activation Cost
+CPM: total cost = activation Cost × impressions / 1,000
+CPC: total cost = activation Cost × clicks
+```
+
+The Activation `Currency` identifies the currency of the Cost value.
+
+### Currency normalisation
+
+The user selects a target currency for the campaign. The application converts cost, flows, and LTV value into that target currency before calculating campaign totals and ROI.
+
+For the MVP, FX rates are explicit application inputs:
+
+```text
+converted amount = source amount × source-currency-to-target-currency rate
+```
+
+The target currency uses a rate of `1.0`. No FX rate should be silently assumed for a non-target currency.
+
 ### Conversion calculations
 
 The MVP treats the three conversion rates as incremental and additive:
@@ -204,9 +232,10 @@ ROI = LTV value / cost
 
 The MVP requires positive-value media metrics to be modelled with positive distributions, preferably lognormal:
 
-- Cost.
 - Impressions.
 - Potentially views and clicks if directly modelled.
+
+Cost is not sampled independently. It is calculated deterministically from the Activation Cost and Pricing Model for each simulated delivery.
 
 Rates must remain bounded:
 

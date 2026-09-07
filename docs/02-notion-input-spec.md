@@ -98,12 +98,13 @@ The Activations data source contains individual runs of an Inventory placement. 
 | Status | `Status` | Select or status | Yes | Must include a value equivalent to `Finished`. |
 | Start date | `Start date` | Date | Recommended | Activation start. |
 | End date | `End date` | Date | Recommended | Activation end. |
-| Actual cost | `Actual cost` | Number | Finished activations | Actual paid cost. |
-| Actual impressions | `Actual impressions` | Number | Finished activations | Delivered impressions/reach. |
-| Actual video views | `Actual video views` | Number | Video activations | Delivered views. |
-| Actual clicks | `Actual clicks` | Number | Finished activations | Delivered clicks. |
-| Actual view rate | `Actual view rate` | Number or formula | Recommended | Actual video views divided by impressions. |
-| Actual CTR | `Actual CTR` | Number or formula | Recommended | Actual clicks divided by impressions. |
+|| Cost | `Cost` | Number | Yes | Single deterministic monetary value or rate, interpreted using the related Inventory Pricing Model. |
+|| Currency | `Currency` | Select | Yes | Currency of Cost. |
+|| Actual impressions | `Actual impressions` | Number | Finished activations | Delivered impressions/reach. |
+|| Actual video views | `Actual video views` | Number | Video activations | Delivered views. |
+|| Actual clicks | `Actual clicks` | Number | Finished activations | Delivered clicks. |
+|| Actual view rate | `Actual view rate` | Number or formula | Recommended | Actual video views divided by impressions. |
+|| Actual CTR | `Actual CTR` | Number or formula | Recommended | Actual clicks divided by impressions. |
 
 ### Activation eligibility rules
 
@@ -111,10 +112,11 @@ An Activation is eligible for historical estimation only when:
 
 1. Its status is `Finished`.
 2. It relates to a valid Inventory record.
-3. Actual cost is present and non-negative.
-4. Actual impressions are present and non-negative.
-5. Video metrics are present for video activations where view rate is required.
-6. Actual clicks are present or explicitly recorded as zero.
+3. Cost and Currency are present and valid.
+4. Cost is non-negative.
+5. Actual impressions are present and non-negative.
+6. Video metrics are present for video activations where view rate is required.
+7. Actual clicks are present or explicitly recorded as zero.
 
 The application should report rejected or incomplete Activations rather than silently excluding them.
 
