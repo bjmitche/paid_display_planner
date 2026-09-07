@@ -17,6 +17,9 @@ class PerformanceEstimate:
     method: str
 
 
+MIN_DISPERSION = 0.05
+
+
 def _median(values: list[float]) -> float:
     values = sorted(values)
     n = len(values)
@@ -27,16 +30,18 @@ def estimate_inventory(inventory: Inventory, history: list[Activation]) -> Perfo
     valid = [
         row
         for row in history
-        if row.status in {"Posted", "Done", "Finished"} and row.actual_impressions is not None
+        if (row.status or "").strip().lower() in {"posted", "done", "finished"}
+        and row.actual_impressions is not None
+        and row.actual_impressions >= 0
     ]
     if not valid:
         return PerformanceEstimate(
             inventory.expected_impressions or 0.0,
             min(max(inventory.expected_view_rate or 0.0, 0.0), 1.0),
             min(max(inventory.expected_ctr or 0.0, 0.0), 1.0),
-            inventory.impressions_sigma or 0.0,
-            inventory.view_rate_sigma or 0.0,
-            inventory.ctr_sigma or 0.0,
+            max(inventory.impressions_sigma or 0.0, 0.0),
+            max(inventory.view_rate_sigma or 0.0, 0.0),
+            max(inventory.ctr_sigma or 0.0, 0.0),
             "fallback",
         )
     impressions = [row.actual_impressions for row in valid if row.actual_impressions is not None]
@@ -54,9 +59,9 @@ def estimate_inventory(inventory: Inventory, history: list[Activation]) -> Perfo
         _median(impressions),
         min(max(_median(views), 0.0), 1.0) if views else inventory.expected_view_rate or 0.0,
         min(max(_median(clicks), 0.0), 1.0) if clicks else inventory.expected_ctr or 0.0,
-        _cv(impressions, inventory.impressions_sigma),
-        _cv(views, inventory.view_rate_sigma),
-        _cv(clicks, inventory.ctr_sigma),
+        _blended_cv(impressions, inventory.impressions_sigma),
+        _blended_cv(views, inventory.view_rate_sigma),
+        _blended_cv(clicks, inventory.ctr_sigma),
         "historical",
     )
 
@@ -69,6 +74,16 @@ def _cv(values: list[float], fallback: float | None) -> float:
         return fallback or 0.0
     variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
     return math.sqrt(variance) / mean
+
+
+def _blended_cv(values: list[float], fallback: float | None) -> float:
+    """Use historical dispersion without allowing sparse data to imply certainty."""
+    fallback_value = max(fallback or 0.0, 0.0)
+    if len(values) < 2:
+        return max(fallback_value, MIN_DISPERSION)
+    historical = _cv(values, fallback_value)
+    weight = min(len(values) / 5.0, 1.0)
+    return max((1 - weight) * fallback_value + weight * historical, MIN_DISPERSION)
 
 
 def cost_for_activation(

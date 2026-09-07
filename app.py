@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from planner.fx import CURRENCIES, fetch_fx_rates
@@ -14,6 +15,7 @@ from planner.models import (
 )
 from planner.notion_client import DEFAULT_DATA_SOURCE_IDS, client_from_values
 from planner.simulation import SimulationInputs, simulate_activation, summarise
+from planner.validation import validate_snapshot
 
 st.set_page_config(page_title="Paid Display Planner", page_icon="📊", layout="wide")
 
@@ -44,7 +46,8 @@ def load_data():
     inventories = {row["id"]: normalise_inventory(row) for row in client.query_all("inventory")}
     activations = {row["id"]: normalise_activation(row) for row in client.query_all("activations")}
     products = {row["id"]: normalise_product(row) for row in client.query_all("products")}
-    return campaigns, inventories, activations, products
+    quality = validate_snapshot(inventories.values(), activations.values(), products.values())
+    return campaigns, inventories, activations, products, quality
 
 
 def add_scenario_activation(inventory, number: int) -> Activation:
@@ -85,12 +88,28 @@ with st.sidebar:
     st.write("✅ Campaign → Activations")
     st.write("✅ Activation-level Products")
     st.write("✅ Scenario Inventory additions")
+    if st.button("Verify Notion data"):
+        try:
+            checks = notion_client().verify()
+            for check in checks:
+                st.write(f"{'✅' if check.ok else '❌'} {check.key}: {check.row_count} rows")
+                if not check.ok:
+                    st.warning(
+                        f"Missing: {check.missing_properties}; type issues: {check.type_mismatches}"
+                    )
+        except Exception as exc:
+            st.error(f"Notion verification failed: {exc}")
 
 if "planner_data" not in st.session_state:
     st.info("Click **Load Campaigns and Activations** to begin.")
     st.stop()
 
-campaigns, inventories, activation_map, products = st.session_state["planner_data"]
+campaigns, inventories, activation_map, products, quality = st.session_state["planner_data"]
+with st.expander("Data quality report", expanded=not quality.ok):
+    st.write({"read": quality.read, "accepted": quality.accepted, "rejected": quality.rejected})
+    if quality.issues:
+        for issue in quality.issues:
+            st.warning(issue)
 if not campaigns:
     st.error("No Campaigns were returned from Notion.")
     st.stop()
@@ -299,7 +318,7 @@ if st.button("Run simulation", type="primary"):
         inventory_id: [row for row in activation_map.values() if row.inventory_id == inventory_id]
         for inventory_id in inventories
     }
-    campaign_rows = []
+    activation_simulations = []
     summaries = []
     for activation in selected:
         inventory = inventories.get(activation.inventory_id)
@@ -334,15 +353,35 @@ if st.button("Run simulation", type="primary"):
                 },
             }
         )
-        campaign_rows.extend(rows)
+        activation_simulations.append((activation, rows))
+    campaign_rows = []
+    if activation_simulations:
+        for index in range(int(iterations)):
+            total = {
+                metric: sum(rows[index][metric] for _, rows in activation_simulations)
+                for metric in (
+                    "impressions", "views", "clicks", "conversions", "cost", "flows", "value"
+                )
+            }
+            total["roi"] = total["value"] / total["cost"] if total["cost"] else 0.0
+            total["cost_per_conversion"] = (
+                total["cost"] / total["conversions"] if total["conversions"] else 0.0
+            )
+            campaign_rows.append(total)
     st.subheader("Activation results")
-    st.dataframe(pd.DataFrame(summaries), width="stretch", hide_index=True)
+    st.dataframe(pd.DataFrame(summaries), use_container_width=True, hide_index=True)
     st.subheader("Campaign results")
     st.dataframe(
         pd.DataFrame(
             [{"Metric": metric, **values} for metric, values in summarise(campaign_rows).items()]
         ),
-        width="stretch",
+        use_container_width=True,
         hide_index=True,
     )
-    st.line_chart(pd.DataFrame(campaign_rows)[["conversions", "flows", "roi"]])
+    campaign_frame = pd.DataFrame(campaign_rows)
+    st.subheader("Campaign distributions")
+    for metric, title in (("conversions", "Conversions"), ("flows", "Flows"), ("roi", "ROI")):
+        figure = px.histogram(campaign_frame, x=metric, title=title)
+        if metric == "roi":
+            figure.add_vline(x=0, line_dash="dash", line_color="red")
+        st.plotly_chart(figure, use_container_width=True)
