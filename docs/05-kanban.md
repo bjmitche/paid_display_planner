@@ -43,6 +43,7 @@ Evidence:
 - [x] Add deterministic pricing-model cost functions.
 - [x] Add explicit FX conversion function with missing-rate rejection.
 - [x] Add unit tests for Fixed, CPM, CPC, and FX behaviour.
+- [x] Add fixed-seed Monte Carlo simulation and quartile summarisation.
 
 ## Ready
 
