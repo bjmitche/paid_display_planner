@@ -44,14 +44,7 @@ MODEL: dict[str, dict[str, Any]] = {
         "Average Purchase Amount": {"number": {"format": "number"}},
         "LTV": {"number": {"format": "number"}},
         "Gross Margin %": {"number": {"format": "percent"}},
-        "Expected Holding Period": {"number": {"format": "number"}},
-        "Expected Holding Period Unit": {"select": {"options": [
-            {"name": "Months"}, {"name": "Years"}
-        ]}},
         "Holding Period": {"number": {"format": "number"}},
-        "Holding Period Unit": {"select": {"options": [
-            {"name": "Months"}, {"name": "Years"}
-        ]}},
         "Net Margin Bps": {"number": {"format": "number"}},
         "Value Currency": {"select": {"options": [
             {"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}
@@ -82,6 +75,11 @@ REMOVE_PROPERTIES = {
         "Expected Cost",
         "Actual Cost",
         "Manual Expected Cost",
+    },
+    "products": {
+        "Expected Holding Period",
+        "Expected Holding Period Unit",
+        "Holding Period Unit",
     },
 }
 

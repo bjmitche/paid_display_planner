@@ -144,8 +144,7 @@ The Products data source provides the commercial assumptions used to value conve
 | Active | `Active` | Checkbox or status | Recommended | Whether the product can be selected. |
 | Average purchase amount | `Average Purchase Amount` | Number | Yes | Pre-loaded product assumption; editable in the app. |
 | Gross margin | `Gross Margin %` | Number | Yes | Gross margin as a percentage of assets; editable in the app. |
-| Expected holding period | `Expected Holding Period` | Number | Yes | Pre-loaded expected holding period; editable in the app. |
-| Expected holding period unit | `Expected Holding Period Unit` | Select | Yes | Months or Years. |
+| Holding period (years) | `Holding Period` | Number | Yes | Pre-loaded expected holding period in years; editable in the app. |
 | LTV | `LTV` | Number | Optional | Stored reference value; the app derives an overridden LTV from the editable product parameters. |
 | Currency | `Currency` | Select | Recommended | Currency for purchase amount and LTV. |
 

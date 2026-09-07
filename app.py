@@ -171,18 +171,12 @@ for activation in selected:
         key=f"margin_{activation.id}",
     )
     holding_period = st.number_input(
-        "Expected holding period",
+        "Expected holding period (years)",
         min_value=0.0,
         value=float(product.holding_period or 0.0),
         key=f"holding_{activation.id}",
     )
-    holding_unit = st.selectbox(
-        "Holding period unit",
-        ["Months", "Years"],
-        index=0 if getattr(product, "holding_period_unit", None) == "Months" else 1,
-        key=f"holding_unit_{activation.id}",
-    )
-    holding_years = holding_period / 12 if holding_unit == "Months" else holding_period
+    holding_years = holding_period
     product = Product(
         product.id,
         product.name,
@@ -191,7 +185,6 @@ for activation in selected:
         product.currency,
         margin_pct / 100,
         holding_period,
-        holding_unit,
     )
     product_by_activation[activation.id] = product
     st.markdown(f"**{activation.name} — activation inputs**")
