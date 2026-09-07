@@ -129,13 +129,28 @@ conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
 for activation in selected:
     inventory = inventories.get(activation.inventory_id)
+    card = st.container(border=True)
+    card.markdown(f"### {activation.name}")
+    source_label = (
+        "Scenario activation" if activation.id.startswith("scenario:") else "Campaign activation"
+    )
+    card.caption(
+        f"{source_label} · {inventory.name if inventory else 'Inventory relation missing'} "
+        f"· {activation.status or 'No status'}"
+    )
+    if inventory:
+        metric_cols = card.columns(4)
+        metric_cols[0].metric("Pricing", inventory.pricing_model or "Not set")
+        metric_cols[1].metric("Cost", f"{activation.cost or 0:,.2f} {activation.currency or ''}")
+        metric_cols[2].metric("Expected impressions", f"{inventory.expected_impressions or 0:,.0f}")
+        metric_cols[3].metric("Expected CTR", f"{(inventory.expected_ctr or 0) * 100:.3f}%")
     default_product_id = activation.product_id or (
         product_options[0].id if product_options else None
     )
     default_index = next(
         (i for i, item in enumerate(product_options) if item.id == default_product_id), 0
     )
-    chosen_product = st.selectbox(
+    chosen_product = card.selectbox(
         f"Product for {activation.name}",
         product_names,
         index=default_index,
