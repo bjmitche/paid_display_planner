@@ -44,6 +44,9 @@ Evidence:
 - [x] Add explicit FX conversion function with missing-rate rejection.
 - [x] Add unit tests for Fixed, CPM, CPC, and FX behaviour.
 - [x] Add fixed-seed Monte Carlo simulation and quartile summarisation.
+- [x] Add campaign-first Streamlit controls and Notion data loading.
+- [x] Add target-currency and explicit FX-rate controls.
+- [x] Add activation/campaign result tables and distribution chart.
 
 ## Ready
 
