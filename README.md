@@ -11,10 +11,13 @@ Streamlit MVP for modelling paid-display activation performance and campaign eco
 ## Local setup
 
 ```bash
-python3 -m venv .venv
+# Use Python 3.11 for this project.
+/Users/finfluenceranalytics/.hermes/hermes-agent/venv/bin/python3.11 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-dev.txt
+ruff check .
 pytest -q
+PYTHONPATH=. python scripts/verify_notion_data.py
 streamlit run app.py
 ```
 
