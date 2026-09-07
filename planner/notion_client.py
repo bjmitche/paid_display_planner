@@ -11,12 +11,21 @@ NOTION_API_BASE = "https://api.notion.com/v1"
 NOTION_VERSION = "2025-09-03"
 
 DEFAULT_DATA_SOURCE_IDS = {
+    "campaigns": "98e0b012-5c8b-45ee-838a-02396f971f9d",
     "inventory": "2d95575d-d8f1-807e-bd84-000bf7007053",
     "activations": "2dd5575d-d8f1-805c-a94f-000b33d68795",
     "products": "2fd5575d-d8f1-800a-b94e-000bb2b0eade",
 }
 
 REQUIRED_PROPERTIES: dict[str, dict[str, str]] = {
+    "campaigns": {
+        "Campaign name": "title",
+        "Activations": "relation",
+        "Stage": "status",
+        "Budget": "number",
+        "Budget currency": "select",
+        "Objective": "rich_text",
+    },
     "inventory": {
         "Name": "title",
         "Channel": "select",
@@ -155,6 +164,7 @@ class NotionClient:
 def client_from_values(
     token: str,
     *,
+    campaigns_id: str = DEFAULT_DATA_SOURCE_IDS["campaigns"],
     inventory_id: str = DEFAULT_DATA_SOURCE_IDS["inventory"],
     activations_id: str = DEFAULT_DATA_SOURCE_IDS["activations"],
     products_id: str = DEFAULT_DATA_SOURCE_IDS["products"],
@@ -162,6 +172,7 @@ def client_from_values(
     return NotionClient(
         token,
         {
+            "campaigns": campaigns_id,
             "inventory": inventory_id,
             "activations": activations_id,
             "products": products_id,
@@ -173,6 +184,9 @@ def client_from_environment() -> NotionClient:
     token = os.environ.get("NOTION_API_TOKEN") or os.environ.get("NOTION_API_KEY")
     return client_from_values(
         token or "",
+        campaigns_id=os.environ.get(
+            "CAMPAIGNS_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_IDS["campaigns"]
+        ),
         inventory_id=os.environ.get(
             "INVENTORY_DATA_SOURCE_ID", DEFAULT_DATA_SOURCE_IDS["inventory"]
         ),

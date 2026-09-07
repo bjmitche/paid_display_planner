@@ -53,6 +53,32 @@ The Inventory data source describes a reusable placement or placement type from 
 | Notes | `Notes` | Rich text | Operational notes or caveats. |
 | Video eligible | `Video eligible` | Checkbox | Explicitly identifies whether view rate applies. |
 
+## Campaign data source
+
+The Campaigns data source is the first-level planning selector in the application. The user selects a Campaign, and the application follows its existing relation to Activations.
+
+### Required Campaign properties
+
+| Application field | Notion property | Type | Required | Description |
+|---|---|---:|---:|---|
+| Campaign name | `Campaign name` | Title | Yes | Pre-loaded campaign selector label. |
+| Activations | `Activations` | Relation | Yes | Relations to the Activations included in the campaign. |
+| Stage | `Stage` | Status | Recommended | Used to identify active/plannable campaigns. |
+| Budget | `Budget` | Number | Optional | Campaign budget context. |
+| Budget currency | `Budget currency` | Select | Optional | Currency for the campaign budget. |
+| Objective | `Objective` | Rich text | Optional | Campaign objective shown as context. |
+
+The application must preserve the relation page IDs from `Activations`. It should not infer campaign membership from names or from Inventory relations.
+
+### Campaign loading rules
+
+1. Load Campaign records visible to the Notion integration.
+2. Present a pre-loaded campaign list to the user.
+3. When a Campaign is selected, read its `Activations` relation.
+4. Match relation IDs to the full Activations result set.
+5. Show unresolved relation IDs as data-quality warnings.
+6. Pre-load the resolved Activations for user selection.
+
 ## Activation data source
 
 The Activations data source contains individual runs of an Inventory placement. It contains both planning relationships and ex-post performance data.

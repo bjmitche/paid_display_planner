@@ -94,17 +94,22 @@ ROI is calculated per simulation iteration and then summarised into quartiles.
 
 ## 4. User inputs
 
-The campaign planner must support:
+The campaign planner must support the following sequence:
 
-- One or more selected Inventory items.
-- Planned activation quantity per selected Inventory item, where applicable.
-- One selected Product.
-- Conversion rate per impression.
-- Conversion rate per view.
-- Conversion rate per click.
-- Optional P25/P75 uncertainty for each conversion rate.
-- Simulation iteration count.
-- Optional random seed for reproducible testing.
+1. Pre-load Campaigns from Notion.
+2. Select the Campaign being planned.
+3. Follow the Campaign's existing `Activations` relation.
+4. Pre-load the related Activations from Notion.
+5. Select or deselect the Activations to include in the projection.
+6. Select one Product, or safely preselect the Product when the Campaign resolves to one.
+7. Enter conversion rate per impression.
+8. Enter conversion rate per view.
+9. Enter conversion rate per click.
+10. Optionally enter P25/P75 uncertainty for each conversion rate.
+11. Set the simulation iteration count.
+12. Optionally set a random seed for reproducible testing.
+
+Inventory is used to supply performance assumptions for the pre-loaded Activations. The normal user journey begins with Campaign selection, not with manually browsing all Inventory.
 
 The application should use sensible defaults but must expose the assumptions used in the run.
 
@@ -276,9 +281,9 @@ A single-page Streamlit application is sufficient for MVP.
 
 ### Sidebar or input panel
 
-- Product selector.
-- Activation selectors.
-- Activation quantity controls.
+- Campaign selector populated from Notion.
+- Pre-loaded activation selector populated from the selected Campaign's Activations relation.
+- Product selector, with safe preselection where possible.
 - Conversion-rate inputs.
 - Conversion-rate uncertainty inputs.
 - Simulation iteration input.
@@ -297,10 +302,10 @@ A single-page Streamlit application is sufficient for MVP.
 ## 11. Data and integration architecture
 
 ```text
-Notion Inventory ─┐
-Notion Activations ├──> Streamlit data layer ──> estimation layer
-Notion Products ──┘                                  ↓
-                                              simulation layer
+Notion Campaigns ─┐
+Notion Inventory ──┼──> Streamlit data layer ──> estimation layer
+Notion Activations ┤                                  ↓
+Notion Products ───┘                             simulation layer
                                                      ↓
                                               results and charts
 ```
@@ -440,9 +445,10 @@ This is not equivalent to authentication. Anyone who obtains the URL may be able
 The MVP is complete when:
 
 - The deployed Streamlit URL loads successfully.
-- Inventory, Activations, and Products can be read from Notion.
+- Campaigns, Inventory, Activations, and Products can be read from Notion.
 - Data-quality issues are visible to the user.
-- A user can select an activation and product.
+- A user can select a Campaign and see its related Activations pre-loaded.
+- A user can select or deselect pre-loaded Activations and select a Product.
 - Product LTV populates automatically.
 - Manual conversion rates can be entered.
 - Zero-history and historical estimation methods work as specified.

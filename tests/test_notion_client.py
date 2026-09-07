@@ -2,7 +2,8 @@ from planner.notion_client import REQUIRED_PROPERTIES
 
 
 def test_required_model_is_explicit() -> None:
-    assert set(REQUIRED_PROPERTIES) == {"inventory", "activations", "products"}
+    assert set(REQUIRED_PROPERTIES) == {"campaigns", "inventory", "activations", "products"}
+    assert REQUIRED_PROPERTIES["campaigns"]["Activations"] == "relation"
     assert REQUIRED_PROPERTIES["inventory"]["Manual Expected CTR"] == "number"
     assert REQUIRED_PROPERTIES["activations"]["Actual Impressions"] == "number"
     assert REQUIRED_PROPERTIES["products"]["LTV"] == "number"

@@ -38,22 +38,40 @@ The user opens the Streamlit URL and sees:
 
 The application should make clear that results are estimates, not observed outcomes.
 
-### 2. Select campaign inputs
+### 2. Select the campaign
 
-The user selects:
+The application pre-loads the available Campaigns from Notion.
 
-1. One or more inventory placements/activation types.
-2. The number of activations for each selected placement, or the available activation instance if the MVP uses one row per planned activation.
-3. One product.
-4. Conversion rate per impression.
-5. Conversion rate per view.
-6. Conversion rate per click.
-7. Optional uncertainty ranges for each conversion rate.
-8. Number of simulation iterations, with a sensible default.
+The user selects the campaign they are working on.
 
-The application then displays the selected product and inventory assumptions.
+The application then follows the Campaign-to-Activations relations already stored in Notion and pre-loads the campaign's Activations. The user does not manually reconstruct the activation list from Inventory for the normal workflow.
 
-### 3. Review populated assumptions
+The activation list should show:
+
+- Activation name.
+- Inventory placement.
+- Status.
+- Expected cost.
+- Product, where present.
+- Whether the activation has completed performance data.
+
+The user can select or deselect the campaign's pre-loaded Activations for the projection.
+
+### 3. Select the product and campaign assumptions
+
+The user selects one Product, unless the Campaign already resolves to a single Product and the application can safely preselect it.
+
+The user enters:
+
+1. Conversion rate per impression.
+2. Conversion rate per view.
+3. Conversion rate per click.
+4. Optional uncertainty ranges for each conversion rate.
+5. Number of simulation iterations, with a sensible default.
+
+The application then displays the selected product and activation assumptions.
+
+### 4. Review populated assumptions
 
 For each selected inventory item, the application displays:
 
