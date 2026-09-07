@@ -125,6 +125,7 @@ st.subheader("4. Activation parameters and Products")
 product_options = list(products.values())
 product_names = [item.name for item in product_options]
 product_by_activation: dict[str, Product] = {}
+conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
 for activation in selected:
     inventory = inventories.get(activation.inventory_id)
@@ -142,6 +143,50 @@ for activation in selected:
     )
     product = product_options[product_names.index(chosen_product)]
     product_by_activation[activation.id] = product
+    st.markdown(f"**{activation.name} — activation inputs**")
+    input_cols = st.columns(4)
+    with input_cols[0]:
+        imp_pct = st.number_input(
+            "Conversion / impression (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=0.01,
+            format="%.4f",
+            key=f"imp_{activation.id}",
+        )
+    with input_cols[1]:
+        view_pct = st.number_input(
+            "Conversion / view (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=0.1,
+            format="%.4f",
+            key=f"view_{activation.id}",
+        )
+    with input_cols[2]:
+        click_pct = st.number_input(
+            "Conversion / click (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=2.0,
+            format="%.4f",
+            key=f"click_{activation.id}",
+        )
+    with input_cols[3]:
+        sigma_pct = st.number_input(
+            "Conversion Sigma (%)",
+            min_value=0.0,
+            max_value=1000.0,
+            value=0.0,
+            format="%.4f",
+            key=f"sigma_{activation.id}",
+        )
+    conversion_by_activation[activation.id] = (
+        imp_pct / 100,
+        view_pct / 100,
+        click_pct / 100,
+        sigma_pct / 100,
+    )
     activation_rows.append(
         {
             "Activation": activation.name,
@@ -185,37 +230,11 @@ fx_rates = {
     for currency in CURRENCIES
     if currency != target_currency
 }
-col1, col2, col3 = st.columns(3)
-with col1:
-    conv_imp_pct = st.number_input(
-        "Conversion / impression (%)", min_value=0.0, max_value=100.0, value=0.01, format="%.4f"
-    )
-with col2:
-    conv_view_pct = st.number_input(
-        "Conversion / view (%)", min_value=0.0, max_value=100.0, value=0.1, format="%.4f"
-    )
-with col3:
-    conv_click_pct = st.number_input(
-        "Conversion / click (%)", min_value=0.0, max_value=100.0, value=2.0, format="%.4f"
-    )
-conv_sigma_pct = st.number_input(
-    "Conversion Sigma (%)", min_value=0.0, max_value=1000.0, value=0.0, format="%.4f"
-)
 iterations = st.number_input(
     "Simulation iterations", min_value=100, max_value=10000, value=2000, step=100
 )
 
 if st.button("Run simulation", type="primary"):
-    config = SimulationInputs(
-        conv_imp_pct / 100,
-        conv_view_pct / 100,
-        conv_click_pct / 100,
-        conv_sigma_pct / 100,
-        int(iterations),
-        42,
-        target_currency,
-        fx_rates,
-    )
     history = {
         inventory_id: [row for row in activation_map.values() if row.inventory_id == inventory_id]
         for inventory_id in inventories
@@ -226,6 +245,17 @@ if st.button("Run simulation", type="primary"):
         inventory = inventories.get(activation.inventory_id)
         if not inventory:
             continue
+        imp_rate, view_rate, click_rate, sigma = conversion_by_activation[activation.id]
+        config = SimulationInputs(
+            imp_rate,
+            view_rate,
+            click_rate,
+            sigma,
+            int(iterations),
+            42,
+            target_currency,
+            fx_rates,
+        )
         rows = simulate_activation(
             activation,
             inventory,
