@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Idempotently add the Paid Display Planner fields to existing Notion data sources."""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from typing import Any
+
+NOTION_API = "https://api.notion.com/v1"
+NOTION_VERSION = "2025-09-03"
+DATA_SOURCES = {
+    "inventory": "2d95575d-d8f1-807e-bd84-000bf7007053",
+    "activations": "2dd5575d-d8f1-805c-a94f-000b33d68795",
+    "products": "2fd5575d-d8f1-800a-b94e-000bb2b0eade",
+}
+
+MODEL: dict[str, dict[str, Any]] = {
+    "inventory": {
+        "Format": {"select": {"options": [
+            {"name": "Display"}, {"name": "Video"}, {"name": "Native"}, {"name": "Other"}
+        ]}},
+        "Active": {"checkbox": {}},
+        "Pricing Model": {"select": {"options": [
+            {"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "CPV"}, {"name": "Other"}
+        ]}},
+        "Manual Expected Cost": {"number": {"format": "number"}},
+        "Manual Expected Impressions": {"number": {"format": "number"}},
+        "Manual Expected View Rate": {"number": {"format": "number"}},
+        "Manual Expected CTR": {"number": {"format": "number"}},
+        "Manual Cost P25": {"number": {"format": "number"}},
+        "Manual Cost P75": {"number": {"format": "number"}},
+        "Manual Impressions P25": {"number": {"format": "number"}},
+        "Manual Impressions P75": {"number": {"format": "number"}},
+        "Manual View Rate P25": {"number": {"format": "number"}},
+        "Manual View Rate P75": {"number": {"format": "number"}},
+        "Manual CTR P25": {"number": {"format": "number"}},
+        "Manual CTR P75": {"number": {"format": "number"}},
+    },
+    "activations": {
+        "Actual Cost": {"number": {"format": "number"}},
+        "Actual Impressions": {"number": {"format": "number"}},
+        "Actual Video Views": {"number": {"format": "number"}},
+        "Actual Clicks": {"number": {"format": "number"}},
+        "Performance Notes": {"rich_text": {}},
+    },
+    "products": {
+        "Average Purchase Amount": {"number": {"format": "number"}},
+        "LTV": {"number": {"format": "number"}},
+        "Holding Period": {"number": {"format": "number"}},
+        "Holding Period Unit": {"select": {"options": [
+            {"name": "Months"}, {"name": "Years"}
+        ]}},
+        "Net Margin Bps": {"number": {"format": "number"}},
+        "Value Currency": {"select": {"options": [
+            {"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}
+        ]}},
+    },
+}
+
+
+def headers() -> dict[str, str]:
+    token = os.environ.get("NOTION_API_KEY") or os.environ.get("NOTION_API_TOKEN")
+    if not token:
+        raise RuntimeError("NOTION_API_KEY or NOTION_API_TOKEN is not set.")
+    return {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
+
+
+def request(path: str, *, method: str = "GET", body: Any = None) -> dict[str, Any]:
+    payload = None if body is None else json.dumps(body).encode()
+    req = urllib.request.Request(
+        f"{NOTION_API}{path}", data=payload, method=method, headers=headers()
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")
+        raise RuntimeError(f"Notion HTTP {exc.code} for {path}: {detail}") from exc
+    return json.loads(raw) if raw else {}
+
+
+def source_schema(source_id: str) -> dict[str, Any]:
+    return request(f"/data_sources/{source_id}")
+
+
+def ensure_source(name: str, source_id: str) -> dict[str, Any]:
+    before = source_schema(source_id)
+    existing = set(before.get("properties", {}))
+    additions = {
+        prop_name: definition
+        for prop_name, definition in MODEL[name].items()
+        if prop_name not in existing
+    }
+    if additions:
+        request(f"/data_sources/{source_id}", method="PATCH", body={"properties": additions})
+    after = source_schema(source_id)
+    after_names = set(after.get("properties", {}))
+    missing = sorted(set(MODEL[name]) - after_names)
+    if missing:
+        raise RuntimeError(f"{name}: properties still missing after PATCH: {missing}")
+    return {
+        "source": name,
+        "source_id": source_id,
+        "title": "".join(t.get("plain_text", "") for t in after.get("title", [])),
+        "added": sorted(additions),
+        "property_count": len(after_names),
+        "required_model_fields_present": True,
+    }
+
+
+def main() -> int:
+    result = [ensure_source(name, DATA_SOURCES[name]) for name in MODEL]
+    print(json.dumps({"status": "ok", "data_sources": result}, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (RuntimeError, KeyError, json.JSONDecodeError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}), file=sys.stderr)
+        raise SystemExit(1)
