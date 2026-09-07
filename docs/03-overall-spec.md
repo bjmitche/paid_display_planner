@@ -423,13 +423,17 @@ Deployment requirements:
 
 ## 16. Security and privacy boundary
 
-The MVP uses no complex authentication workflow. Therefore:
+The MVP uses no complex authentication workflow. The interim access decision is **URL secrecy**: the Streamlit app may be publicly reachable, but its URL will not be advertised or indexed and will be shared only with intended users.
 
-- The application URL must not be treated as unrestricted public access without confirming the Streamlit Community Cloud access configuration.
-- No credentials or tokens may be displayed in errors, logs, or results.
-- Only read-only Notion access is required.
-- The application should expose only the data needed for planning.
-- If the data is considered commercially sensitive, deployment access must be reviewed before sharing the URL broadly.
+This is not equivalent to authentication. Anyone who obtains the URL may be able to access the app. Therefore:
+
+- Keep the GitHub repository private.
+- Store the Notion token only in Streamlit Community Cloud Secrets.
+- Never commit credentials to GitHub or display them in the application.
+- Do not expose unnecessary Notion fields in the application.
+- Do not write data back to Notion from the public app.
+- Treat the URL as confidential and do not publish it in README badges, public documentation, or social posts.
+- Revisit authenticated hosting before the app is used for materially sensitive data or shared beyond the intended users.
 
 ## 17. MVP acceptance criteria
 
