@@ -262,9 +262,6 @@ for activation in selected:
             "Expected View Rate": inventory.expected_view_rate if inventory else None,
             "Expected CTR": inventory.expected_ctr if inventory else None,
             "Product": product.name,
-            "LTV": product.ltv,
-            "Average Purchase Amount": product.average_purchase_amount,
-            "Product Currency": product.currency,
         }
     )
 st.dataframe(pd.DataFrame(activation_rows), width="stretch", hide_index=True)
