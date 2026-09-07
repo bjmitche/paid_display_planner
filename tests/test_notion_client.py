@@ -8,7 +8,7 @@ def test_required_model_is_explicit() -> None:
     assert REQUIRED_PROPERTIES["inventory"]["CTR Sigma %"] == "number"
     assert REQUIRED_PROPERTIES["activations"]["Cost"] == "number"
     assert "Actual Cost" not in REQUIRED_PROPERTIES["activations"]
-    assert REQUIRED_PROPERTIES["products"]["LTV"] == "number"
+    assert "LTV" not in REQUIRED_PROPERTIES["products"]
 
 
 def test_data_source_ids_are_stable_defaults() -> None:
