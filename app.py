@@ -121,9 +121,56 @@ selected_ids = st.multiselect(
 )
 selected = [all_activation_map[item_id] for item_id in selected_ids]
 
-st.subheader("4. Activation parameters and Products")
 product_options = list(products.values())
 product_names = [item.name for item in product_options]
+
+st.subheader("4. Product parameters")
+product_ids = list(dict.fromkeys(item.product_id for item in selected if item.product_id))
+if not product_ids and product_options:
+    product_ids = [product_options[0].id]
+product_overrides: dict[str, Product] = {}
+for product_id in product_ids:
+    base_product = products[product_id]
+    product_card = st.container(border=True)
+    product_card.markdown(f"### {base_product.name}")
+    product_card.caption(f"Product economics · {base_product.currency or 'Currency not set'}")
+    product_cols = product_card.columns(4)
+    with product_cols[0]:
+        purchase_amount = st.number_input(
+            "Average purchase amount",
+            min_value=0.0,
+            value=float(base_product.average_purchase_amount or 0.0),
+            key=f"product_purchase_{product_id}",
+        )
+    with product_cols[1]:
+        margin_pct = st.number_input(
+            "Gross margin (% of assets)",
+            min_value=0.0,
+            max_value=100.0,
+            value=float((base_product.gross_margin_pct or 0.0) * 100),
+            key=f"product_margin_{product_id}",
+        )
+    with product_cols[2]:
+        holding_years = st.number_input(
+            "Expected holding period (years)",
+            min_value=0.0,
+            value=float(base_product.holding_period or 0.0),
+            key=f"product_holding_{product_id}",
+        )
+    with product_cols[3]:
+        derived_ltv = purchase_amount * (margin_pct / 100) * holding_years
+        st.metric("Derived LTV", f"{derived_ltv:,.2f} {base_product.currency or ''}")
+    product_overrides[product_id] = Product(
+        product_id,
+        base_product.name,
+        purchase_amount,
+        derived_ltv,
+        base_product.currency,
+        margin_pct / 100,
+        holding_years,
+    )
+
+st.subheader("5. Activation parameters and Product selection")
 product_by_activation: dict[str, Product] = {}
 conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
@@ -157,39 +204,7 @@ for activation in selected:
         key=f"product_{activation.id}",
     )
     product = product_options[product_names.index(chosen_product)]
-    product_cols = card.columns(3)
-    with product_cols[0]:
-        purchase_amount = st.number_input(
-            "Average purchase amount",
-            min_value=0.0,
-            value=float(product.average_purchase_amount or 0.0),
-            key=f"purchase_{activation.id}",
-        )
-    with product_cols[1]:
-        margin_pct = st.number_input(
-            "Gross margin (% of assets)",
-            min_value=0.0,
-            max_value=100.0,
-            value=float((getattr(product, "gross_margin_pct", None) or 0.0) * 100),
-            key=f"margin_{activation.id}",
-        )
-    with product_cols[2]:
-        holding_period = st.number_input(
-            "Expected holding period (years)",
-            min_value=0.0,
-            value=float(product.holding_period or 0.0),
-            key=f"holding_{activation.id}",
-        )
-    holding_years = holding_period
-    product = Product(
-        product.id,
-        product.name,
-        purchase_amount,
-        purchase_amount * (margin_pct / 100) * holding_years,
-        product.currency,
-        margin_pct / 100,
-        holding_period,
-    )
+    product = product_overrides.get(product.id) or product
     product_by_activation[activation.id] = product
     card.markdown(f"**{activation.name} — conversion assumptions**")
     input_cols = card.columns(4)
