@@ -29,6 +29,16 @@ def prop_value(prop: dict[str, Any] | None) -> Any:
         return [item.get("name") for item in value or []]
     if kind == "formula":
         return prop_value(value if isinstance(value, dict) else None)
+    if kind == "rollup":
+        if (value or {}).get("type") == "array":
+            result = []
+            for item in (value or {}).get("array", []):
+                if item.get("type") == "relation":
+                    result.extend(
+                        prop_value({"type": "relation", "relation": item.get("relation", [])}) or []
+                    )
+            return result
+        return None
     return value
 
 
@@ -44,6 +54,7 @@ class Campaign:
     stage: str | None
     budget: float | None
     budget_currency: str | None
+    product_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,6 +110,7 @@ def normalise_campaign(page: dict[str, Any]) -> Campaign:
         p.get("Stage"),
         _number(p.get("Budget")),
         p.get("Budget currency"),
+        tuple(p.get("Product(s)") or []),
     )
 
 

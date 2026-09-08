@@ -144,7 +144,11 @@ product_options = list(products.values())
 product_names = [item.name for item in product_options]
 
 st.subheader("4. Product parameters")
-product_ids = list(dict.fromkeys(item.product_id for item in selected if item.product_id))
+product_ids = list(
+    dict.fromkeys(
+        campaign.product_ids + tuple(item.product_id for item in selected if item.product_id)
+    )
+)
 if not product_ids and product_options:
     product_ids = [product_options[0].id]
 product_overrides: dict[str, Product] = {}
@@ -360,7 +364,13 @@ if st.button("Run simulation", type="primary"):
             total = {
                 metric: sum(rows[index][metric] for _, rows in activation_simulations)
                 for metric in (
-                    "impressions", "views", "clicks", "conversions", "cost", "flows", "value"
+                    "impressions",
+                    "views",
+                    "clicks",
+                    "conversions",
+                    "cost",
+                    "flows",
+                    "value",
                 )
             }
             total["roi"] = total["value"] / total["cost"] if total["cost"] else 0.0
