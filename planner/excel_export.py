@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 from .economics import estimate_inventory
 from .models import Activation, Campaign, Inventory, Product
@@ -35,6 +36,20 @@ def _write_rows(
             _copy_row_style(sheet, template_row, row, max_column)
         for column, value in enumerate(values, 1):
             sheet.cell(row, column).value = value
+
+
+def _replace_table(sheet, old_name: str, new_name: str, ref: str) -> None:
+    if old_name in sheet.tables:
+        del sheet.tables[old_name]
+    table = Table(displayName=new_name, ref=ref)
+    table.tableStyleInfo = TableStyleInfo(
+        name="TableStyleMedium2",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False,
+    )
+    sheet.add_table(table)
 
 
 def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
@@ -242,51 +257,146 @@ def build_workbook(
     inputs.tables["Products"].ref = f"A39:I{39 + len(product_rows)}"
     inputs.tables["FXRates"].ref = f"A46:G{46 + len(fx_rows)}"
 
-    detail_rows = []
+    activation_headers = [
+        "Activation ID",
+        "Activation",
+        "Source",
+        "Inventory",
+        "Product",
+        "Status",
+        "Pricing model",
+        "Cost",
+        "Currency",
+        "Expected impressions",
+        "Expected view rate %",
+        "Expected CTR %",
+        "Conv / impression %",
+        "Conv / view %",
+        "Conv / click %",
+        "Conversion Sigma %",
+        "Actual impressions",
+        "Actual video views",
+        "Actual clicks",
+        "Actual view rate %",
+        "Actual CTR %",
+        "Sim impressions Q1",
+        "Sim impressions median",
+        "Sim impressions Q3",
+        "Sim views median",
+        "Sim clicks median",
+        "Sim engagements median",
+        "Sim conversions Q1",
+        "Sim conversions median",
+        "Sim conversions Q3",
+        "Sim flows median",
+        "Sim LTV median",
+        "Sim cost median",
+        "Sim ROI median",
+        "Estimation method",
+    ]
+    activation_summary_rows = []
     for activation, rows in activation_simulations:
-        for index, row in enumerate(rows, 1):
-            detail_rows.append(
-                [
-                    index,
-                    activation.name,
-                    row["impressions"],
-                    row["views"] / row["impressions"] if row["impressions"] else 0,
-                    row["views"],
-                    row["clicks"] / row["impressions"] if row["impressions"] else 0,
-                    row["clicks"],
-                    row["conversions"],
-                    row["cost"],
-                    row["flows"],
-                    row["value"],
-                    row["roi"],
-                    row["cost"] / row["conversions"] if row["conversions"] else 0,
-                ]
-            )
-    _clear_data(activation_detail, 4, activation_detail.max_row, 18)
-    _write_rows(activation_detail, 4, detail_rows, 4, 18)
-    activation_detail.tables["ActivationDetail"].ref = f"A3:M{3 + len(detail_rows)}"
-
-    campaign_detail = []
-    for index, row in enumerate(campaign_rows, 1):
-        campaign_detail.append(
+        inventory = inventories.get(activation.inventory_id or "")
+        product = product_overrides.get(activation.product_id or "") or products.get(
+            activation.product_id or ""
+        )
+        estimate = (
+            estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
+            if inventory
+            else None
+        )
+        imp, view, click, sigma = conversion_by_activation[activation.id]
+        activation_summary_rows.append(
             [
-                index,
-                row["impressions"],
-                row["views"],
-                row["clicks"],
-                row["conversions"],
-                row["cost"],
-                row["flows"],
-                row["value"],
-                row["roi"],
-                row["cost_per_conversion"],
-                row["views"] / row["impressions"] if row["impressions"] else 0,
-                row["clicks"] / row["impressions"] if row["impressions"] else 0,
+                activation.id,
+                activation.name,
+                "Scenario activation"
+                if activation.id.startswith("scenario:")
+                else "Campaign activation",
+                inventory.name if inventory else None,
+                product.name if product else None,
+                activation.status,
+                inventory.pricing_model if inventory else None,
+                activation.cost,
+                activation.currency,
+                estimate.impressions if estimate else None,
+                estimate.view_rate if estimate else None,
+                estimate.ctr if estimate else None,
+                imp,
+                view,
+                click,
+                sigma,
+                activation.actual_impressions,
+                activation.actual_video_views,
+                activation.actual_clicks,
+                activation.actual_video_views / activation.actual_impressions
+                if activation.actual_video_views is not None and activation.actual_impressions
+                else None,
+                activation.actual_clicks / activation.actual_impressions
+                if activation.actual_clicks is not None and activation.actual_impressions
+                else None,
+                _quartile([r["impressions"] for r in rows], 0.25),
+                _quartile([r["impressions"] for r in rows], 0.50),
+                _quartile([r["impressions"] for r in rows], 0.75),
+                _quartile([r["views"] for r in rows], 0.50),
+                _quartile([r["clicks"] for r in rows], 0.50),
+                _quartile([r["views"] + r["clicks"] for r in rows], 0.50),
+                _quartile([r["conversions"] for r in rows], 0.25),
+                _quartile([r["conversions"] for r in rows], 0.50),
+                _quartile([r["conversions"] for r in rows], 0.75),
+                _quartile([r["flows"] for r in rows], 0.50),
+                _quartile([r["value"] for r in rows], 0.50),
+                _quartile([r["cost"] for r in rows], 0.50),
+                _quartile([r["roi"] for r in rows], 0.50),
+                estimate.method if estimate else "Unavailable",
             ]
         )
-    _clear_data(simulation_detail, 4, simulation_detail.max_row, 12)
-    _write_rows(simulation_detail, 4, campaign_detail, 4, 12)
-    simulation_detail.tables["SimulationDetail"].ref = f"A3:L{3 + len(campaign_detail)}"
+    _clear_data(activation_detail, 3, activation_detail.max_row, 35)
+    _write_rows(activation_detail, 3, [activation_headers] + activation_summary_rows, 3, 35)
+    _replace_table(
+        activation_detail,
+        "ActivationDetail",
+        "ActivationSummary",
+        f"A3:AI{3 + len(activation_summary_rows)}",
+    )
+
+    simulation_headers = ["Metric", "Unit", "Ex-post", "Q1", "Median", "Q3", "Definition"]
+    ex_post = {
+        "impressions": sum(a.actual_impressions or 0 for a in selected),
+        "views": sum(a.actual_video_views or 0 for a in selected),
+        "clicks": sum(a.actual_clicks or 0 for a in selected),
+    }
+    simulation_rows = []
+    for label, key, unit, definition in (
+        ("Impressions", "impressions", "count", "Distributed impressions"),
+        ("Views", "views", "count", "Recorded video views"),
+        ("Clicks", "clicks", "count", "Recorded clicks"),
+        ("Conversions", "conversions", "count", "Simulation conversion output"),
+        ("Flows", "flows", target_currency, "Conversions × average purchase amount"),
+        ("Cost", "cost", target_currency, "Deterministic fixed, CPM or CPC cost"),
+        ("LTV value", "value", target_currency, "Conversions × derived LTV"),
+        ("ROI", "roi", "x", "LTV value ÷ cost"),
+    ):
+        values = [row[key] for row in campaign_rows] if campaign_rows else []
+        simulation_rows.append(
+            [
+                label,
+                unit,
+                ex_post.get(key),
+                _quartile(values, 0.25),
+                _quartile(values, 0.50),
+                _quartile(values, 0.75),
+                definition,
+            ]
+        )
+    _clear_data(simulation_detail, 3, simulation_detail.max_row, 12)
+    _write_rows(simulation_detail, 3, [simulation_headers] + simulation_rows, 3, 7)
+    _replace_table(
+        simulation_detail,
+        "SimulationDetail",
+        "SimulationSummary",
+        f"A3:G{3 + len(simulation_rows)}",
+    )
 
     summary["B5"] = campaign.name
     summary["B6"] = "Streamlit scenario"
