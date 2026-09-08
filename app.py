@@ -5,6 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 from planner.economics import estimate_inventory
+from planner.excel_export import build_workbook
 from planner.fx import CURRENCIES, fetch_fx_rates
 from planner.models import (
     Activation,
@@ -449,3 +450,25 @@ if st.button("Run simulation", type="primary"):
         if metric == "roi":
             figure.add_vline(x=0, line_dash="dash", line_color="red")
         st.plotly_chart(figure, width="stretch")
+
+    workbook_bytes = build_workbook(
+        campaign,
+        selected,
+        inventories,
+        products,
+        product_overrides,
+        history,
+        conversion_by_activation,
+        target_currency,
+        fx_rates,
+        int(iterations),
+        activation_simulations,
+        campaign_rows,
+    )
+    st.download_button(
+        "Download populated Excel workbook",
+        data=workbook_bytes,
+        file_name=f"paid_display_planner_{campaign.name[:40].replace(' ', '_')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type="primary",
+    )
