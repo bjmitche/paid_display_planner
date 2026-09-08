@@ -42,6 +42,14 @@ def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
             sheet.cell(row, column).value = None
 
 
+def _quartile(values: list[float], fraction: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, int(len(ordered) * fraction) - 1))
+    return ordered[index]
+
+
 def build_workbook(
     campaign: Campaign,
     selected: list[Activation],
@@ -70,8 +78,16 @@ def build_workbook(
     inputs["C10"] = 42
     inputs["C12"] = "Exported from Paid Display Planner. Values are a read-only scenario snapshot."
 
+    selected_inventory_ids = list(
+        dict.fromkeys(item.inventory_id for item in selected if item.inventory_id)
+    )
+    relevant_inventories = [
+        inventories[inventory_id]
+        for inventory_id in selected_inventory_ids
+        if inventory_id in inventories
+    ]
     inventory_rows = []
-    for inventory in inventories.values():
+    for inventory in relevant_inventories:
         history = history_by_inventory.get(inventory.id, [])
         estimate = estimate_inventory(inventory, history)
         inventory_rows.append(
@@ -105,7 +121,6 @@ def build_workbook(
                 "Exported historical/fallback estimate",
             ]
         )
-    _write_rows(inputs, 17, inventory_rows, 17, 27)
 
     product_rows = []
     for product in {p.id: p for p in product_overrides.values()}.values():
@@ -122,7 +137,6 @@ def build_workbook(
                 "Loaded from Notion with any Streamlit override applied.",
             ]
         )
-    _write_rows(inputs, 40, product_rows, 40, 9)
 
     activation_rows = []
     for activation in selected:
@@ -167,7 +181,6 @@ def build_workbook(
                 "Exported scenario input.",
             ]
         )
-    _write_rows(inputs, 28, activation_rows, 28, 25)
 
     fx_rows = [
         [
@@ -192,7 +205,28 @@ def build_workbook(
         ]
         for currency, rate in fx_rates.items()
     )
+
+    for start, capacity, count, insert_at in (
+        (52, 0, len(fx_rows), 52),
+        (44, 3, len(product_rows), 44),
+        (37, 8, len(activation_rows), 37),
+        (25, 7, len(inventory_rows), 25),
+    ):
+        if count > capacity:
+            inputs.insert_rows(insert_at, count - capacity)
+
+    _clear_data(inputs, 17, 23, 27)
+    _clear_data(inputs, 28, 35, 25)
+    _clear_data(inputs, 40, 42, 9)
+    _clear_data(inputs, 47, 50, 7)
+    _write_rows(inputs, 17, inventory_rows, 17, 27)
+    _write_rows(inputs, 28, activation_rows, 28, 25)
+    _write_rows(inputs, 40, product_rows, 40, 9)
     _write_rows(inputs, 47, fx_rows, 47, 7)
+    inputs.tables["InventoryEstimates"].ref = f"A16:AA{16 + len(inventory_rows)}"
+    inputs.tables["Activations"].ref = f"A27:Y{27 + len(activation_rows)}"
+    inputs.tables["Products"].ref = f"A39:I{39 + len(product_rows)}"
+    inputs.tables["FXRates"].ref = f"A46:G{46 + len(fx_rows)}"
 
     detail_rows = []
     for activation, rows in activation_simulations:
@@ -212,11 +246,11 @@ def build_workbook(
                     row["value"],
                     row["roi"],
                     row["cost"] / row["conversions"] if row["conversions"] else 0,
-                    row["views"] + row["clicks"],
                 ]
             )
     _clear_data(activation_detail, 4, activation_detail.max_row, 18)
     _write_rows(activation_detail, 4, detail_rows, 4, 18)
+    activation_detail.tables["ActivationDetail"].ref = f"A3:M{3 + len(detail_rows)}"
 
     campaign_detail = []
     for index, row in enumerate(campaign_rows, 1):
@@ -238,6 +272,7 @@ def build_workbook(
         )
     _clear_data(simulation_detail, 4, simulation_detail.max_row, 12)
     _write_rows(simulation_detail, 4, campaign_detail, 4, 12)
+    simulation_detail.tables["SimulationDetail"].ref = f"A3:L{3 + len(campaign_detail)}"
 
     summary["B5"] = campaign.name
     summary["B6"] = "Streamlit scenario"
@@ -273,6 +308,48 @@ def build_workbook(
             else "count"
         )
         summary.cell(row, 5).value = f"Simulation distribution; unit: {unit}"
+
+    if len(activation_simulations) > 8:
+        summary.insert_rows(37, len(activation_simulations) - 8)
+    activation_summary_rows = []
+    for activation, rows in activation_simulations:
+        inventory = inventories.get(activation.inventory_id or "")
+        product = product_overrides.get(activation.product_id or "") or products.get(
+            activation.product_id or ""
+        )
+        estimate = (
+            estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
+            if inventory
+            else None
+        )
+        activation_summary_rows.append(
+            [
+                activation.name,
+                "Scenario activation"
+                if activation.id.startswith("scenario:")
+                else "Campaign activation",
+                inventory.name if inventory else None,
+                product.name if product else None,
+                estimate.method if estimate else "Unavailable",
+                estimate.impressions if estimate else None,
+                estimate.view_rate if estimate else None,
+                estimate.ctr if estimate else None,
+                _quartile([r["conversions"] for r in rows], 0.50),
+                _quartile([r["conversions"] for r in rows], 0.25),
+                _quartile([r["conversions"] for r in rows], 0.75),
+                _quartile([r["flows"] for r in rows], 0.50),
+                _quartile([r["value"] for r in rows], 0.50),
+                _quartile([r["cost"] for r in rows], 0.50),
+                _quartile([r["roi"] for r in rows], 0.50),
+                _quartile(
+                    [r["cost"] / r["conversions"] if r["conversions"] else 0 for r in rows],
+                    0.50,
+                ),
+            ]
+        )
+    _clear_data(summary, 29, 36 + max(0, len(activation_simulations) - 8), 16)
+    _write_rows(summary, 29, activation_summary_rows, 29, 16)
+    summary.tables["ActivationPerformance"].ref = f"A28:P{28 + len(activation_summary_rows)}"
 
     output = BytesIO()
     workbook.calculation.fullCalcOnLoad = True

@@ -48,3 +48,6 @@ def test_build_workbook_populates_template():
         "Simulation Detail",
     ]
     assert loaded["Model Inputs & Assumptions"]["C5"].value == "Campaign"
+    assert loaded["Model Inputs & Assumptions"].tables["Activations"].ref == "A27:Y28"
+    assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:M6"
+    assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:L6"
