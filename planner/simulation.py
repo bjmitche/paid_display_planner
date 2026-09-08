@@ -109,9 +109,10 @@ def simulate_campaign(
     iterations = min(len(rows) for rows in activation_rows.values())
     campaign: list[dict[str, float]] = []
     for index in range(iterations):
-        total = {key: sum(rows[index][key] for rows in activation_rows.values()) for key in (
-            "impressions", "views", "clicks", "conversions", "cost", "flows", "value"
-        )}
+        total = {
+            key: sum(rows[index][key] for rows in activation_rows.values())
+            for key in ("impressions", "views", "clicks", "conversions", "cost", "flows", "value")
+        }
         total["roi"] = total["value"] / total["cost"] if total["cost"] else 0.0
         total["cost_per_conversion"] = (
             total["cost"] / total["conversions"] if total["conversions"] else 0.0

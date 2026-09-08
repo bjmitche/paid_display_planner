@@ -1,4 +1,5 @@
 """Validation and data-quality reporting for the read-only Notion snapshot."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -69,14 +70,20 @@ def validate_snapshot(
     product_ids = {row.id for row in groups["products"]}
     report.unresolved_inventory = tuple(
         sorted(
-            {row.inventory_id for row in groups["activations"]
-             if row.inventory_id and row.inventory_id not in inventory_ids}
+            {
+                row.inventory_id
+                for row in groups["activations"]
+                if row.inventory_id and row.inventory_id not in inventory_ids
+            }
         )
     )
     report.unresolved_products = tuple(
         sorted(
-            {row.product_id for row in groups["activations"]
-             if row.product_id and row.product_id not in product_ids}
+            {
+                row.product_id
+                for row in groups["activations"]
+                if row.product_id and row.product_id not in product_ids
+            }
         )
     )
     for relation, values in (
