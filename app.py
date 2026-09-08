@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from planner.economics import estimate_inventory
 from planner.fx import CURRENCIES, fetch_fx_rates
 from planner.models import (
     Activation,
@@ -204,6 +205,10 @@ for product_id in product_ids:
     )
 
 st.subheader("5. Activation parameters and Product selection")
+history_by_inventory = {
+    inventory_id: [row for row in activation_map.values() if row.inventory_id == inventory_id]
+    for inventory_id in inventories
+}
 product_by_activation: dict[str, Product] = {}
 conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
@@ -219,11 +224,16 @@ for activation in selected:
         f"· {activation.status or 'No status'}"
     )
     if inventory:
+        estimate = estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
         metric_cols = card.columns(4)
         metric_cols[0].metric("Pricing", inventory.pricing_model or "Not set")
         metric_cols[1].metric("Cost", f"{activation.cost or 0:,.2f} {activation.currency or ''}")
-        metric_cols[2].metric("Expected impressions", f"{inventory.expected_impressions or 0:,.0f}")
-        metric_cols[3].metric("Expected CTR", f"{(inventory.expected_ctr or 0) * 100:.3f}%")
+        metric_cols[2].metric("Expected impressions", f"{estimate.impressions:,.0f}")
+        metric_cols[3].metric("Expected CTR", f"{estimate.ctr * 100:.3f}%")
+        card.caption(
+            f"Performance estimates: {estimate.method}; "
+            f"expected view rate {estimate.view_rate * 100:.3f}%"
+        )
     default_product_id = activation.product_id or (
         product_options[0].id if product_options else None
     )
