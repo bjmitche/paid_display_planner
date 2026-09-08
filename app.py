@@ -403,7 +403,15 @@ if st.button("Run simulation", type="primary"):
             )
             campaign_rows.append(total)
     st.subheader("Activation results")
-    st.dataframe(pd.DataFrame(summaries).style.format("{:,.2f}"), width="stretch", hide_index=True)
+    activation_table = pd.DataFrame(summaries)
+    activation_numeric_columns = [
+        column for column in activation_table.columns if column != "Activation"
+    ]
+    st.dataframe(
+        activation_table.style.format({column: "{:,.2f}" for column in activation_numeric_columns}),
+        width="stretch",
+        hide_index=True,
+    )
     st.subheader("Campaign results")
     unit_by_metric = {
         "impressions": "impressions",
@@ -440,4 +448,4 @@ if st.button("Run simulation", type="primary"):
         figure = px.histogram(campaign_frame, x=metric, title=title)
         if metric == "roi":
             figure.add_vline(x=0, line_dash="dash", line_color="red")
-        st.plotly_chart(figure, use_container_width=True)
+        st.plotly_chart(figure, width="stretch")
