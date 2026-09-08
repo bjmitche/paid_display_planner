@@ -367,9 +367,13 @@ if st.button("Run simulation", type="primary"):
             config,
         )
         summary = summarise(rows)
+        estimate = estimate_inventory(inventory, history.get(inventory.id, []))
         summaries.append(
             {
                 "Activation": activation.name,
+                "Expected impressions": estimate.impressions,
+                "Distributed impressions (median)": summary["impressions"]["median"],
+                "Engagements (median)": summary["views"]["median"] + summary["clicks"]["median"],
                 **{
                     f"{metric} median": values["median"]
                     for metric, values in summary.items()
@@ -399,13 +403,35 @@ if st.button("Run simulation", type="primary"):
             )
             campaign_rows.append(total)
     st.subheader("Activation results")
-    st.dataframe(pd.DataFrame(summaries), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(summaries).style.format("{:,.2f}"), width="stretch", hide_index=True)
     st.subheader("Campaign results")
+    unit_by_metric = {
+        "impressions": "impressions",
+        "views": "views",
+        "clicks": "clicks",
+        "conversions": "conversions",
+        "cost": target_currency,
+        "flows": target_currency,
+        "value": target_currency,
+        "roi": "x",
+        "cost_per_conversion": f"{target_currency} / conversion",
+    }
+    campaign_summary = summarise(campaign_rows)
+    campaign_table = pd.DataFrame(
+        [
+            {
+                "Metric": metric.replace("_", " ").title(),
+                "Unit": unit_by_metric.get(metric, ""),
+                "Q1": values["q1"],
+                "Median": values["median"],
+                "Q3": values["q3"],
+            }
+            for metric, values in campaign_summary.items()
+        ]
+    )
     st.dataframe(
-        pd.DataFrame(
-            [{"Metric": metric, **values} for metric, values in summarise(campaign_rows).items()]
-        ),
-        use_container_width=True,
+        campaign_table.style.format({"Q1": "{:,.2f}", "Median": "{:,.2f}", "Q3": "{:,.2f}"}),
+        width="stretch",
         hide_index=True,
     )
     campaign_frame = pd.DataFrame(campaign_rows)
