@@ -77,6 +77,7 @@ st.caption(
 )
 
 with st.sidebar:
+    page = st.radio("Page", ["Planner", "Data quality"], key="page")
     st.header("1. Load campaign data")
     if st.button("Load Campaigns and Activations"):
         try:
@@ -88,7 +89,25 @@ with st.sidebar:
     st.write("✅ Campaign → Activations")
     st.write("✅ Activation-level Products")
     st.write("✅ Scenario Inventory additions")
-    if st.button("Verify Notion data"):
+
+if "planner_data" not in st.session_state:
+    st.info("Click **Load Campaigns and Activations** to begin.")
+    st.stop()
+
+campaigns, inventories, activation_map, products, quality = st.session_state["planner_data"]
+
+if page == "Data quality":
+    st.title("Data quality")
+    st.caption("Read-only validation of the current Notion snapshot and live schema.")
+    st.subheader("Snapshot quality")
+    st.write({"read": quality.read, "accepted": quality.accepted, "rejected": quality.rejected})
+    if quality.issues:
+        for issue in quality.issues:
+            st.warning(issue)
+    else:
+        st.success("No snapshot data-quality issues detected.")
+    st.subheader("Live Notion schema verification")
+    if st.button("Verify Notion data", type="primary"):
         try:
             checks = notion_client().verify()
             for check in checks:
@@ -99,17 +118,8 @@ with st.sidebar:
                     )
         except Exception as exc:
             st.error(f"Notion verification failed: {exc}")
-
-if "planner_data" not in st.session_state:
-    st.info("Click **Load Campaigns and Activations** to begin.")
     st.stop()
 
-campaigns, inventories, activation_map, products, quality = st.session_state["planner_data"]
-with st.expander("Data quality report", expanded=not quality.ok):
-    st.write({"read": quality.read, "accepted": quality.accepted, "rejected": quality.rejected})
-    if quality.issues:
-        for issue in quality.issues:
-            st.warning(issue)
 if not campaigns:
     st.error("No Campaigns were returned from Notion.")
     st.stop()
