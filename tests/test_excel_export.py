@@ -51,3 +51,5 @@ def test_build_workbook_populates_template():
     assert loaded["Model Inputs & Assumptions"].tables["Activations"].ref == "A27:Y28"
     assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:M6"
     assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:L6"
+    assert sum(loaded["Performance Summary"].cell(row, 4).value for row in range(85, 105)) == 3
+    assert sum(loaded["Performance Summary"].cell(row, 9).value for row in range(85, 105)) == 3

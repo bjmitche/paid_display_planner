@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from copy import copy
 from datetime import date
 from io import BytesIO
@@ -40,6 +41,19 @@ def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
     for row in range(start_row, end_row + 1):
         for column in range(1, max_column + 1):
             sheet.cell(row, column).value = None
+
+
+def _histogram(values: list[float], bins: int = 20) -> list[tuple[float, float, int]]:
+    if not values:
+        return [(0.0, 1.0, 0)] * bins
+    low = min(values)
+    high = max(values)
+    width = (high - low) / bins if high > low else 1.0
+    counts = [0] * bins
+    for value in values:
+        index = min(bins - 1, math.floor((value - low) / width))
+        counts[index] += 1
+    return [(low + width * i, low + width * (i + 1), counts[i]) for i in range(bins)]
 
 
 def _quartile(values: list[float], fraction: float) -> float:
@@ -349,7 +363,22 @@ def build_workbook(
         )
     _clear_data(summary, 29, 36 + max(0, len(activation_simulations) - 8), 16)
     _write_rows(summary, 29, activation_summary_rows, 29, 16)
-    summary.tables["ActivationPerformance"].ref = f"A28:P{28 + len(activation_summary_rows)}"
+    conversion_bins = _histogram([row["conversions"] for row in campaign_rows])
+    roi_bins = _histogram([row["roi"] for row in campaign_rows])
+    summary["A83"] = (
+        "Fixed histogram bins: 20 equal-width bins per distribution; "
+        "final bin includes the maximum."
+    )
+    for offset, (start, end, count) in enumerate(conversion_bins, 85):
+        summary.cell(offset, 1).value = start
+        summary.cell(offset, 2).value = end
+        summary.cell(offset, 3).value = f"{start:,.2f}"
+        summary.cell(offset, 4).value = count
+    for offset, (start, end, count) in enumerate(roi_bins, 85):
+        summary.cell(offset, 6).value = start
+        summary.cell(offset, 7).value = end
+        summary.cell(offset, 8).value = f"{start:,.2f}"
+        summary.cell(offset, 9).value = count
 
     output = BytesIO()
     workbook.calculation.fullCalcOnLoad = True
