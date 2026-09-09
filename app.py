@@ -480,14 +480,21 @@ if st.button("Run simulation", type="primary"):
             campaign_rows.append(total)
     st.subheader("Activation results")
     activation_table = pd.DataFrame(summaries)
-    activation_numeric_columns = [
-        column for column in activation_table.columns if column != "Activation"
-    ]
-    st.dataframe(
-        activation_table.style.format({column: "{:,.2f}" for column in activation_numeric_columns}),
-        width="stretch",
-        hide_index=True,
-    )
+    activation_integer_columns = {
+        "Expected impressions",
+        "Distributed impressions (median)",
+        "Engagements (median)",
+        "conversions median",
+    }
+    activation_display = activation_table.copy()
+    for column in activation_display.columns:
+        if column == "Activation":
+            continue
+        number_format = "{:,.0f}" if column in activation_integer_columns else "{:,.2f}"
+        activation_display[column] = activation_display[column].map(
+            lambda value: number_format.format(value) if pd.notna(value) else ""
+        )
+    st.dataframe(activation_display, width="stretch", hide_index=True)
     st.subheader("Campaign results")
     st.caption(
         "Cost per conversion is calculated for each simulation draw as total cost "
@@ -534,13 +541,15 @@ if st.button("Run simulation", type="primary"):
             for metric, values in campaign_summary.items()
         ]
     )
-    st.dataframe(
-        campaign_table.style.format(
-            {"Unfavorable": "{:,.2f}", "Median": "{:,.2f}", "Favorable": "{:,.2f}"}
-        ),
-        width="stretch",
-        hide_index=True,
-    )
+    campaign_integer_metrics = {"impressions", "views", "clicks", "conversions"}
+    campaign_display = campaign_table.copy()
+    for row_index, metric in enumerate(campaign_summary):
+        number_format = "{:,.0f}" if metric in campaign_integer_metrics else "{:,.2f}"
+        for column in ("Unfavorable", "Median", "Favorable"):
+            campaign_display.loc[row_index, column] = number_format.format(
+                campaign_display.loc[row_index, column]
+            )
+    st.dataframe(campaign_display, width="stretch", hide_index=True)
     campaign_frame = pd.DataFrame(campaign_rows)
     st.subheader("Campaign distributions")
     for metric, title in (("conversions", "Conversions"), ("flows", "Flows"), ("roi", "ROI")):
