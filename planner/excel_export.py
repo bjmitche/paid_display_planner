@@ -415,15 +415,28 @@ def build_workbook(
         "LTV value": "value",
         "ROI": "roi",
     }
+    summary["B14"] = "Unfavorable"
+    summary["C14"] = "Median"
+    summary["D14"] = "Favorable"
+    direction_by_metric = {
+        "impressions": "Higher is better",
+        "views": "Higher is better",
+        "clicks": "Higher is better",
+        "conversions": "Higher is better",
+        "cost": "Lower is better",
+        "flows": "Higher is better",
+        "value": "Higher is better",
+        "roi": "Higher is better",
+        "cost_per_conversion": "Lower is better",
+    }
     for row, (label, key) in enumerate(campaign_metrics.items(), 15):
         values = sorted(item[key] for item in campaign_rows) if campaign_rows else [0]
         q1 = values[max(0, int(len(values) * 0.25) - 1)]
-        median = values[len(values) // 2]
         q3 = values[max(0, int(len(values) * 0.75) - 1)]
         summary.cell(row, 1).value = label
-        summary.cell(row, 2).value = q1
-        summary.cell(row, 3).value = median
-        summary.cell(row, 4).value = q3
+        summary.cell(row, 2).value = q1 if direction_by_metric[key] == "Higher is better" else q3
+        summary.cell(row, 3).value = _quartile(values, 0.50)
+        summary.cell(row, 4).value = q3 if direction_by_metric[key] == "Higher is better" else q1
         unit = (
             target_currency
             if key in {"cost", "flows", "value", "cost_per_conversion"}
@@ -431,7 +444,7 @@ def build_workbook(
             if key == "roi"
             else "count"
         )
-        summary.cell(row, 5).value = f"Simulation distribution; unit: {unit}"
+        summary.cell(row, 5).value = f"{direction_by_metric[key]}; unit: {unit}"
 
     for summary_row, metric in ((24, "LTV value"), (25, "ROI")):
         for column, statistic in ((2, "D"), (3, "E"), (4, "F")):

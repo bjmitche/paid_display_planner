@@ -446,8 +446,8 @@ if st.button("Run simulation", type="primary"):
     st.subheader("Campaign results")
     st.caption(
         "Cost per conversion is calculated for each simulation draw as total cost "
-        "÷ total conversions. With fixed cost, it falls as conversions rise; "
-        "Q1, median and Q3 are quartiles of that ratio."
+        "÷ total conversions. The table ranks outcomes consistently: higher is better "
+        "for ROI and value metrics, while lower is better for cost and CAC."
     )
     unit_by_metric = {
         "impressions": "impressions",
@@ -460,21 +460,39 @@ if st.button("Run simulation", type="primary"):
         "roi": "x",
         "cost_per_conversion": f"{target_currency} / conversion",
     }
+    direction_by_metric = {
+        "impressions": "Higher is better",
+        "views": "Higher is better",
+        "clicks": "Higher is better",
+        "conversions": "Higher is better",
+        "cost": "Lower is better",
+        "flows": "Higher is better",
+        "value": "Higher is better",
+        "roi": "Higher is better",
+        "cost_per_conversion": "Lower is better",
+    }
     campaign_summary = summarise(campaign_rows)
     campaign_table = pd.DataFrame(
         [
             {
                 "Metric": metric.replace("_", " ").title(),
                 "Unit": unit_by_metric.get(metric, ""),
-                "Q1": values["q1"],
+                "Ranking": direction_by_metric[metric],
+                "Unfavorable": values["q1"]
+                if direction_by_metric[metric] == "Higher is better"
+                else values["q3"],
                 "Median": values["median"],
-                "Q3": values["q3"],
+                "Favorable": values["q3"]
+                if direction_by_metric[metric] == "Higher is better"
+                else values["q1"],
             }
             for metric, values in campaign_summary.items()
         ]
     )
     st.dataframe(
-        campaign_table.style.format({"Q1": "{:,.2f}", "Median": "{:,.2f}", "Q3": "{:,.2f}"}),
+        campaign_table.style.format(
+            {"Unfavorable": "{:,.2f}", "Median": "{:,.2f}", "Favorable": "{:,.2f}"}
+        ),
         width="stretch",
         hide_index=True,
     )
