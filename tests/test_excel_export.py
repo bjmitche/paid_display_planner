@@ -53,3 +53,11 @@ def test_build_workbook_populates_template():
     assert loaded["Simulation Detail"].tables["SimulationSummary"].ref == "A3:G11"
     assert sum(loaded["Performance Summary"].cell(row, 4).value for row in range(85, 105)) == 3
     assert sum(loaded["Performance Summary"].cell(row, 9).value for row in range(85, 105)) == 3
+    assert (
+        loaded["Performance Summary"]["B24"].value
+        == "=INDEX('Simulation Detail'!$D:$D,MATCH(\"LTV value\",'Simulation Detail'!$A:$A,0))"
+    )
+    assert (
+        loaded["Performance Summary"]["C25"].value
+        == "=INDEX('Simulation Detail'!$E:$E,MATCH(\"ROI\",'Simulation Detail'!$A:$A,0))"
+    )

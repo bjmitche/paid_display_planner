@@ -433,6 +433,13 @@ def build_workbook(
         )
         summary.cell(row, 5).value = f"Simulation distribution; unit: {unit}"
 
+    for summary_row, metric in ((24, "LTV value"), (25, "ROI")):
+        for column, statistic in ((2, "D"), (3, "E"), (4, "F")):
+            summary.cell(summary_row, column).value = (
+                f"=INDEX('Simulation Detail'!${statistic}:${statistic},"
+                f"MATCH(\"{metric}\",'Simulation Detail'!$A:$A,0))"
+            )
+
     if len(activation_simulations) > 8:
         summary.insert_rows(37, len(activation_simulations) - 8)
     activation_summary_rows = []
