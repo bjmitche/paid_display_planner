@@ -4,7 +4,28 @@ from planner.validation import validate_snapshot
 
 
 def inventory(format_name="Video"):
-    return Inventory("i", "Inventory", format_name, "Fixed", 10, 1000, 0.5, 0.1, 0.1, 0.1, 0.1)
+    return Inventory(
+        id="i",
+        name="Inventory",
+        format=format_name,
+        buying_model="Fixed placement fee",
+        objective="Impressions",
+        currency="EUR",
+        cost=10,
+        rate_basis="CPM",
+        expected_cpm=None,
+        expected_cpc=None,
+        expected_cpv=None,
+        cpm_sigma=None,
+        cpc_sigma=None,
+        cpv_sigma=None,
+        expected_impressions=1000,
+        expected_view_rate=0.5,
+        expected_ctr=0.1,
+        impressions_sigma=0.1,
+        view_rate_sigma=0.1,
+        ctr_sigma=0.1,
+    )
 
 
 def test_validation_reports_bad_relations_and_negative_metrics():

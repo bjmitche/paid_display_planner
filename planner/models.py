@@ -62,8 +62,17 @@ class Inventory:
     id: str
     name: str
     format: str | None
-    pricing_model: str | None
-    expected_cost: float | None
+    buying_model: str | None
+    objective: str | None
+    currency: str | None
+    cost: float | None
+    rate_basis: str | None
+    expected_cpm: float | None
+    expected_cpc: float | None
+    expected_cpv: float | None
+    cpm_sigma: float | None
+    cpc_sigma: float | None
+    cpv_sigma: float | None
     expected_impressions: float | None
     expected_view_rate: float | None
     expected_ctr: float | None
@@ -120,8 +129,17 @@ def normalise_inventory(page: dict[str, Any]) -> Inventory:
         page["id"],
         p.get("Name") or page["id"],
         p.get("Format"),
-        p.get("Pricing Model"),
-        _number(p.get("Expected Cost")),
+        p.get("Buying Model"),
+        p.get("Objective"),
+        p.get("Currency"),
+        _number(p.get("Cost")),
+        p.get("Rate Basis"),
+        _number(p.get("Expected CPM")),
+        _number(p.get("Expected CPC")),
+        _number(p.get("Expected CPV")),
+        _number(p.get("CPM Sigma %")),
+        _number(p.get("CPC Sigma %")),
+        _number(p.get("CPV Sigma %")),
         _number(p.get("Expected Impressions")),
         _number(p.get("Expected View Rate")),
         _number(p.get("Expected CTR")),

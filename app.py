@@ -59,8 +59,8 @@ def add_scenario_activation(inventory, number: int) -> Activation:
         "Scenario",
         inventory.id,
         None,
-        inventory.expected_cost,
-        "EUR",
+        inventory.cost,
+        inventory.currency or "EUR",
         None,
         None,
         None,
@@ -236,6 +236,7 @@ conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
 for activation in selected:
     inventory = inventories.get(activation.inventory_id)
+    estimate = None
     card = st.container(border=True)
     card.markdown(f"### {activation.name}")
     source_label = (
@@ -245,11 +246,52 @@ for activation in selected:
         f"{source_label} · {inventory.name if inventory else 'Inventory relation missing'} "
         f"· {activation.status or 'No status'}"
     )
+    cost_cols = card.columns(2)
+    with cost_cols[0]:
+        activation_cost = st.number_input(
+            "Activation Cost / Budget",
+            min_value=0.0,
+            value=float(
+                activation.cost
+                if activation.cost is not None
+                else (inventory.cost if inventory else 0.0)
+            ),
+            key=f"activation_cost_{activation.id}",
+        )
+    with cost_cols[1]:
+        activation_currency = st.selectbox(
+            "Activation Currency",
+            list(CURRENCIES),
+            index=(
+                list(CURRENCIES).index(activation.currency)
+                if activation.currency in CURRENCIES
+                else list(CURRENCIES).index(inventory.currency)
+                if inventory and inventory.currency in CURRENCIES
+                else 0
+            ),
+            key=f"activation_currency_{activation.id}",
+        )
+    activation = Activation(
+        activation.id,
+        activation.name,
+        activation.status,
+        activation.inventory_id,
+        activation.product_id,
+        activation_cost,
+        activation_currency,
+        activation.actual_impressions,
+        activation.actual_video_views,
+        activation.actual_clicks,
+    )
     if inventory:
-        estimate = estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
+        estimate = estimate_inventory(
+            inventory,
+            history_by_inventory.get(inventory.id, []),
+            activation.cost,
+        )
         metric_cols = card.columns(4)
-        metric_cols[0].metric("Pricing", inventory.pricing_model or "Not set")
-        metric_cols[1].metric("Cost", f"{activation.cost or 0:,.2f} {activation.currency or ''}")
+        metric_cols[0].metric("Buying model", inventory.buying_model or "Not set")
+        metric_cols[1].metric("Rate basis", inventory.rate_basis or "Not set")
         metric_cols[2].metric("Expected impressions", f"{estimate.impressions:,.0f}")
         metric_cols[3].metric("Expected CTR", f"{estimate.ctr * 100:.3f}%")
         card.caption(
@@ -329,12 +371,14 @@ for activation in selected:
             "Activation": activation.name,
             "Source": "Scenario" if activation.id.startswith("scenario:") else "Notion Campaign",
             "Inventory": inventory.name if inventory else "Missing",
-            "Pricing Model": inventory.pricing_model if inventory else None,
+            "Buying Model": inventory.buying_model if inventory else None,
+            "Objective": inventory.objective if inventory else None,
+            "Rate Basis": inventory.rate_basis if inventory else None,
             "Cost": activation.cost,
             "Currency": activation.currency,
-            "Expected Impressions": inventory.expected_impressions if inventory else None,
-            "Expected View Rate": inventory.expected_view_rate if inventory else None,
-            "Expected CTR": inventory.expected_ctr if inventory else None,
+            "Expected Impressions": estimate.impressions if estimate else None,
+            "Expected View Rate": estimate.view_rate if estimate else None,
+            "Expected CTR": estimate.ctr if estimate else None,
             "Product": product.name,
         }
     )

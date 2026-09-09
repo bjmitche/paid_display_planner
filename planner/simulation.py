@@ -51,21 +51,39 @@ def simulate_activation(
     product: Product,
     inputs: SimulationInputs,
 ) -> list[dict[str, float]]:
-    estimate = estimate_inventory(inventory, history)
+    estimate = estimate_inventory(inventory, history, activation.cost)
     rates = inputs.fx_rates or {}
     rng = random.Random(inputs.seed)
     output: list[dict[str, float]] = []
     for _ in range(inputs.iterations):
-        impressions = _draw_positive(estimate.impressions, estimate.impressions_sigma, rng)
         view_rate = _draw_rate(estimate.view_rate, estimate.view_rate_sigma, rng)
         ctr = _draw_rate(estimate.ctr, estimate.ctr_sigma, rng)
+        target_rate = _draw_positive(estimate.target_rate, estimate.target_rate_sigma, rng)
+        cost = cost_for_activation(activation)
+        budget_driven = (inventory.buying_model or "").lower() in {
+            "fixed rate + budget",
+            "algorithmic budget",
+        }
+        if budget_driven and target_rate > 0 and estimate.target_basis == "CPM":
+            impressions = cost / target_rate * 1000
+        elif budget_driven and target_rate > 0 and estimate.target_basis == "CPC" and ctr > 0:
+            clicks = cost / target_rate
+            impressions = clicks / ctr
+        elif budget_driven and target_rate > 0 and estimate.target_basis == "CPV" and view_rate > 0:
+            views = cost / target_rate
+            impressions = views / view_rate
+        else:
+            impressions = _draw_positive(estimate.impressions, estimate.impressions_sigma, rng)
         views = impressions * view_rate if "video" in (inventory.format or "").lower() else 0.0
         clicks = impressions * ctr
+        if budget_driven and estimate.target_basis == "CPC" and target_rate > 0:
+            clicks = cost / target_rate
+        if budget_driven and estimate.target_basis == "CPV" and target_rate > 0:
+            views = cost / target_rate
         imp_rate = _draw_rate(inputs.conversion_per_impression, inputs.conversion_sigma, rng)
         view_rate_conversion = _draw_rate(inputs.conversion_per_view, inputs.conversion_sigma, rng)
         click_rate = _draw_rate(inputs.conversion_per_click, inputs.conversion_sigma, rng)
         conversions = impressions * imp_rate + views * view_rate_conversion + clicks * click_rate
-        cost = cost_for_activation(activation, inventory.pricing_model, impressions, clicks)
         cost = fx_convert(cost, activation.currency, inputs.target_currency, rates)
         flows, value = product_value(product, conversions, inputs.target_currency, rates)
         output.append(

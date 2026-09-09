@@ -8,7 +8,28 @@ from planner.models import Activation, Campaign, Inventory, Product
 
 def test_build_workbook_populates_template():
     activation = Activation("a", "Activation", "Done", "i", "p", 100, "EUR", None, None, None)
-    inventory = Inventory("i", "Inventory", "Display", "Fixed", 100, 1000, 0, 0.01, 0.1, 0.1, 0.1)
+    inventory = Inventory(
+        id="i",
+        name="Inventory",
+        format="Display",
+        buying_model="Fixed placement fee",
+        objective="Impressions",
+        currency="EUR",
+        cost=100,
+        rate_basis="CPM",
+        expected_cpm=None,
+        expected_cpc=None,
+        expected_cpv=None,
+        cpm_sigma=None,
+        cpc_sigma=None,
+        cpv_sigma=None,
+        expected_impressions=1000,
+        expected_view_rate=0,
+        expected_ctr=0.01,
+        impressions_sigma=0.1,
+        view_rate_sigma=0.1,
+        ctr_sigma=0.1,
+    )
     product = Product("p", "Product", 1000, None, "EUR", 0.01, 2)
     rows = [
         {
