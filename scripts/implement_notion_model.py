@@ -37,8 +37,8 @@ MODEL: dict[str, dict[str, Any]] = {
         },
         "Expected Cost": {"number": {"format": "number"}},
         "Expected Impressions": {"number": {"format": "number"}},
-        "Expected View Rate": {"number": {"format": "number"}},
-        "Expected CTR": {"number": {"format": "number"}},
+        "Expected View Rate": {"number": {"format": "percent"}},
+        "Expected CTR": {"number": {"format": "percent"}},
         "Impressions Sigma %": {"number": {"format": "percent"}},
         "View Rate Sigma %": {"number": {"format": "percent"}},
         "CTR Sigma %": {"number": {"format": "percent"}},
@@ -131,12 +131,17 @@ def ensure_source(name: str, source_id: str) -> dict[str, Any]:
         for prop_name, definition in MODEL[name].items()
         if prop_name not in existing
     }
+    updates = {
+        prop_name: definition
+        for prop_name, definition in MODEL[name].items()
+        if prop_name in existing
+    }
     removals = {
         prop_name: None
         for prop_name in REMOVE_PROPERTIES.get(name, set())
         if prop_name in existing and prop_name not in MODEL[name]
     }
-    changes = {**additions, **removals}
+    changes = {**updates, **additions, **removals}
     if changes:
         request(f"/data_sources/{source_id}", method="PATCH", body={"properties": changes})
     after = source_schema(source_id)
