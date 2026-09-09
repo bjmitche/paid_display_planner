@@ -52,13 +52,60 @@ MODEL: dict[str, dict[str, Any]] = {
         "Currency": {"select": {"options": [{"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}]}},
         "Cost": {"number": {"format": "number"}},
         "Rate Basis": {
-            "select": {"options": [{"name": "CPC"}, {"name": "CPV"}]}
+            "select": {"options": [{"name": "CPV"}]}
         },
         "Fixed Rate": {"number": {"format": "number"}},
-        "Expected CPC": {"number": {"format": "number"}},
-        "Expected CPV": {"number": {"format": "number"}},
-        "CPC Sigma %": {"number": {"format": "percent"}},
-        "CPV Sigma %": {"number": {"format": "percent"}},
+        "Expected CPM": {
+            "formula": {
+                "expression": (
+                    "if(or(empty(prop(\"Cost\")), empty(prop(\"Expected Impressions\")), "
+                    "prop(\"Expected Impressions\") == 0), 0, "
+                    "prop(\"Cost\") / prop(\"Expected Impressions\") * 1000)"
+                )
+            }
+        },
+        "CPM Sigma %": {"formula": {"expression": "prop(\"Impressions Sigma %\")"}},
+        "Expected CPC": {
+            "formula": {
+                "expression": (
+                    "if(or(empty(prop(\"Cost\")), empty(prop(\"Expected Impressions\")), "
+                    "empty(prop(\"Expected CTR\")), prop(\"Expected Impressions\") == 0, "
+                    "prop(\"Expected CTR\") == 0), 0, "
+                    "prop(\"Cost\") / (prop(\"Expected Impressions\") * prop(\"Expected CTR\")))"
+                )
+            }
+        },
+        "CPC Sigma %": {
+            "formula": {
+                "expression": (
+                    "if(or(empty(prop(\"Impressions Sigma %\")), "
+                    "empty(prop(\"CTR Sigma %\"))), 0, "
+                    "sqrt((1 + pow(prop(\"Impressions Sigma %\"), 2)) * "
+                    "(1 + pow(prop(\"CTR Sigma %\"), 2)) - 1))"
+                )
+            }
+        },
+        "Expected CPV": {
+            "formula": {
+                "expression": (
+                    "if(or(empty(prop(\"Cost\")), empty(prop(\"Expected Impressions\")), "
+                    "empty(prop(\"Expected View Rate\")), prop(\"Expected Impressions\") == 0, "
+                    "prop(\"Expected View Rate\") == 0), 0, "
+                    "prop(\"Cost\") / (prop(\"Expected Impressions\") * "
+                    "prop(\"Expected View Rate\")))"
+                )
+            }
+        },
+        "CPV Sigma %": {
+            "formula": {
+                "expression": (
+                    "if(or(empty(prop(\"Impressions Sigma %\")), "
+                    "empty(prop(\"View Rate Sigma %\"))), 0, "
+                    "sqrt((1 + pow(prop(\"Impressions Sigma %\"), 2)) * "
+                    "(1 + pow(prop(\"View Rate Sigma %\"), 2)) - 1))"
+                )
+            }
+        },
         "Standard Period": {
             "select": {
                 "options": [
@@ -107,8 +154,7 @@ REMOVE_PROPERTIES = {
         "Expected Cost",
         "Budget",
         "Fixed Cost",
-        "Expected CPM",
-        "CPM Sigma %",
+        "Cost/Budget",
         "Configuration Notes",
         "List Price",
         "Price Currency",
