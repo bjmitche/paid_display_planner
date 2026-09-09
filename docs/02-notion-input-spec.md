@@ -28,14 +28,24 @@ These are the only Inventory properties required by the planner itself:
 |---|---|---:|---:|---|
 | Inventory name | `Name` | Title | Yes | Human-readable placement name. |
 | Format | `Format` | Select | Yes | Display, video, native, or other. |
-| Expected cost | `Expected Cost` | Number | New/no-history fallback | Central assumed cost when historical data is unavailable. |
+| Buying model | `Buying Model` | Select | Yes | Fixed placement fee, Fixed rate + budget, or Algorithmic budget. |
+| Objective | `Objective` | Select | Yes | Not applicable, Impressions, Clicks, or Video views. |
+| Currency | `Currency` | Select | Yes | Currency for fixed cost, budget, and rates. |
+| Budget | `Budget` | Number | Model-dependent | Fully utilised budget for Fixed rate + budget or Algorithmic budget. |
+| Fixed cost | `Fixed Cost` | Number | Model-dependent | Total fee for Fixed placement fee. |
+| Rate basis | `Rate Basis` | Select | Model-dependent | CPM, CPC, or CPV for fixed-rate buying. |
+| Fixed rate | `Fixed Rate` | Number | Model-dependent | Fixed CPM, CPC, or CPV rate. |
+| Expected CPM | `Expected CPM` | Number | Algorithmic impressions objective | Expected algorithmic CPM. |
+| Expected CPC | `Expected CPC` | Number | Algorithmic clicks objective | Expected algorithmic CPC. |
+| Expected CPV | `Expected CPV` | Number | Algorithmic video-view objective | Expected algorithmic CPV. |
+| CPM/CPC/CPV Sigma | `CPM Sigma %`, `CPC Sigma %`, `CPV Sigma %` | Number | Algorithmic model | Uncertainty for the relevant algorithmic rate. |
+| Start/end date | `Start Date`, `End Date` | Date | Recommended | Fixed delivery window. |
 | Expected impressions | `Expected Impressions` | Number | New/no-history fallback | Central assumed impressions/reach when historical data is unavailable. |
-| Expected view rate | `Expected View Rate` | Number | Video/no-history fallback | Central assumed view rate as a decimal proportion. |
-| Expected CTR | `Expected CTR` | Number | New/no-history fallback | Central assumed CTR as a decimal proportion. |
-| Cost sigma | `Cost Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
-| Impressions sigma | `Impressions Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
-| View-rate sigma | `View Rate Sigma %` | Number | Video/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
-| CTR sigma | `CTR Sigma %` | Number | New/no-history fallback | Assumed coefficient of variation, stored as a percentage. |
+| Expected view rate | `Expected View Rate` | Number, percent format | Video/no-history fallback | Central assumed view rate. |
+| Expected CTR | `Expected CTR` | Number, percent format | New/no-history fallback | Central assumed CTR. |
+| Impressions sigma | `Impressions Sigma %` | Number, percent format | New/no-history fallback | Assumed coefficient of variation. |
+| View-rate sigma | `View Rate Sigma %` | Number, percent format | Video/no-history fallback | Assumed coefficient of variation. |
+| CTR sigma | `CTR Sigma %` | Number, percent format | New/no-history fallback | Assumed coefficient of variation. |
 
 The planner does not require Inventory-level historical expected values. When eligible finished Activations exist, the application calculates the central performance estimate from historical data. Inventory values above provide the fallback for new or data-sparse placements.
 

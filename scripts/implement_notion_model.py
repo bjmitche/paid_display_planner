@@ -30,11 +30,39 @@ MODEL: dict[str, dict[str, Any]] = {
                 ]
             }
         },
-        "Pricing Model": {
+        "Buying Model": {
             "select": {
-                "options": [{"name": "Fixed"}, {"name": "CPM"}, {"name": "CPC"}, {"name": "Other"}]
+                "options": [
+                    {"name": "Fixed placement fee"},
+                    {"name": "Fixed rate + budget"},
+                    {"name": "Algorithmic budget"},
+                ]
             }
         },
+        "Objective": {
+            "select": {
+                "options": [
+                    {"name": "Not applicable"},
+                    {"name": "Impressions"},
+                    {"name": "Clicks"},
+                    {"name": "Video views"},
+                ]
+            }
+        },
+        "Currency": {"select": {"options": [{"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}]}},
+        "Budget": {"number": {"format": "number"}},
+        "Fixed Cost": {"number": {"format": "number"}},
+        "Rate Basis": {"select": {"options": [{"name": "CPM"}, {"name": "CPC"}, {"name": "CPV"}]}},
+        "Fixed Rate": {"number": {"format": "number"}},
+        "Expected CPM": {"number": {"format": "number"}},
+        "Expected CPC": {"number": {"format": "number"}},
+        "Expected CPV": {"number": {"format": "number"}},
+        "CPM Sigma %": {"number": {"format": "percent"}},
+        "CPC Sigma %": {"number": {"format": "percent"}},
+        "CPV Sigma %": {"number": {"format": "percent"}},
+        "Start Date": {"date": {}},
+        "End Date": {"date": {}},
+        "Configuration Notes": {"rich_text": {}},
         "Expected Cost": {"number": {"format": "number"}},
         "Expected Impressions": {"number": {"format": "number"}},
         "Expected View Rate": {"number": {"format": "percent"}},
@@ -64,7 +92,6 @@ MODEL: dict[str, dict[str, Any]] = {
 REMOVE_PROPERTIES = {
     "inventory": {
         "Active",
-        "Pricing Model",
         "Manual Expected Cost",
         "Manual Expected Impressions",
         "Manual Expected View Rate",
