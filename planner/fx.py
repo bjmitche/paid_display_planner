@@ -4,6 +4,7 @@ import json
 import urllib.parse
 import urllib.request
 
+FX_VERSION = "fx-v1"
 CURRENCIES = ("EUR", "GBP", "USD")
 
 

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from .models import Activation, Inventory, Product
 
+ESTIMATOR_VERSION = "target-rate-v2"
+
 
 @dataclass(frozen=True)
 class PerformanceEstimate:

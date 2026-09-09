@@ -4,9 +4,9 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from planner.economics import estimate_inventory
+from planner.economics import ESTIMATOR_VERSION, estimate_inventory
 from planner.excel_export import build_workbook
-from planner.fx import CURRENCIES, fetch_fx_rates
+from planner.fx import CURRENCIES, FX_VERSION, fetch_fx_rates
 from planner.models import (
     Activation,
     Product,
@@ -75,7 +75,8 @@ def cached_fx_rates(target_currency: str):
 st.title("Paid Display Planner")
 st.caption(
     "Campaign-first planning. Existing Campaign Activations are the base; added "
-    "Inventory rows are scenario-only."
+    "Inventory rows are scenario-only. "
+    f"Build: {ESTIMATOR_VERSION}/{FX_VERSION}"
 )
 
 with st.sidebar:
