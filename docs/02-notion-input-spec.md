@@ -33,11 +33,10 @@ These are the only Inventory properties required by the planner itself:
 | Currency | `Currency` | Select | Yes | Currency for fixed cost, budget, and rates. |
 | Cost | `Cost` | Number | Yes | Total fixed placement fee or fully utilised budget, interpreted using Buying Model. |
 | Rate basis | `Rate Basis` | Select | Model-dependent | CPM, CPC, or CPV for fixed-rate buying. |
-| Fixed rate | `Fixed Rate` | Number | Model-dependent | Fixed CPM, CPC, or CPV rate. |
-| Expected CPM | `Expected CPM` | Number | Algorithmic impressions objective | Expected algorithmic CPM. |
+| Fixed rate | `Fixed Rate` | Number | Model-dependent | Fixed CPC or CPV rate. CPM is implied from Cost and Expected Impressions. |
 | Expected CPC | `Expected CPC` | Number | Algorithmic clicks objective | Expected algorithmic CPC. |
 | Expected CPV | `Expected CPV` | Number | Algorithmic video-view objective | Expected algorithmic CPV. |
-| CPM/CPC/CPV Sigma | `CPM Sigma %`, `CPC Sigma %`, `CPV Sigma %` | Number | Algorithmic model | Uncertainty for the relevant algorithmic rate. |
+| CPC/CPV Sigma | `CPC Sigma %`, `CPV Sigma %` | Number | Algorithmic model | Uncertainty for the relevant algorithmic rate. |
 | Standard period | `Standard Period` | Select | Recommended | One-off, Daily, Weekly, Monthly, Quarterly, Annual, Per send, or Per placement/run. |
 | Channel | `Channel` | Select | Recommended | Retained operational classification. |
 | Publishers & Brokers | `Publishers & Brokers` | Relation | Recommended | Retained operational relationship. |
@@ -50,9 +49,18 @@ These are the only Inventory properties required by the planner itself:
 | View-rate sigma | `View Rate Sigma %` | Number, percent format | Video/no-history fallback | Assumed coefficient of variation. |
 | CTR sigma | `CTR Sigma %` | Number, percent format | New/no-history fallback | Assumed coefficient of variation. |
 
+### Implied CPM
+
+CPM is not an Inventory input. When Cost and Expected Impressions are available, the application derives:
+
+```text
+Implied CPM = Cost / Expected Impressions × 1,000
+CPM Sigma % = Impressions Sigma %
+```
+
 The planner does not require Inventory-level historical expected values. When eligible finished Activations exist, the application calculates the central performance estimate from historical data. Inventory values above provide the fallback for new or data-sparse placements.
 
-Existing operational Inventory properties such as `Channel`, `List Price`, `Price Currency`, `Minimum Period`, `Last Updated`, `Publishers & Brokers`, and `Targeted` may remain in Notion, but they are not required by the planner MVP.
+Existing operational Inventory properties such as `Channel`, `Publishers & Brokers`, `Targeted`, and `Last Updated` are retained where useful; removed legacy pricing and list-price fields are no longer part of the planner model.
 
 ### Sigma convention
 
