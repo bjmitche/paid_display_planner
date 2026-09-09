@@ -32,8 +32,7 @@ These are the only Inventory properties required by the planner itself:
 | Objective | `Objective` | Select | Yes | Not applicable, Impressions, Clicks, or Video views. |
 | Currency | `Currency` | Select | Yes | Currency for fixed cost, budget, and rates. |
 | Cost | `Cost` | Number | Yes | Total fixed placement fee or fully utilised budget, interpreted using Buying Model. |
-| Rate basis | `Rate Basis` | Select | Model-dependent | CPM, CPC, or CPV for fixed-rate buying. |
-| Fixed rate | `Fixed Rate` | Number | Model-dependent | Fixed CPV rate. CPM and CPC are derived. |
+| Rate basis | `Rate Basis` | Select | Factual metadata | CPM, CPC, or CPV classification for the target rate. It is not a manual rate input. |
 | Expected CPM | `Expected CPM` | Formula | Derived | Cost ÷ Expected Impressions × 1,000. |
 | CPM Sigma | `CPM Sigma %` | Formula | Derived | Equal to Impressions Sigma %. |
 | Expected CPC | `Expected CPC` | Formula | Derived | Cost ÷ (Expected Impressions × Expected CTR). |

@@ -34,7 +34,6 @@ REQUIRED_PROPERTIES: dict[str, dict[str, str]] = {
         "Currency": "select",
         "Cost": "number",
         "Rate Basis": "select",
-        "Fixed Rate": "number",
         "Expected CPM": "formula",
         "CPM Sigma %": "formula",
         "Expected CPC": "formula",

@@ -52,9 +52,8 @@ MODEL: dict[str, dict[str, Any]] = {
         "Currency": {"select": {"options": [{"name": "EUR"}, {"name": "GBP"}, {"name": "USD"}]}},
         "Cost": {"number": {"format": "number"}},
         "Rate Basis": {
-            "select": {"options": [{"name": "CPV"}]}
+            "select": {"options": [{"name": "CPM"}, {"name": "CPC"}, {"name": "CPV"}]}
         },
-        "Fixed Rate": {"number": {"format": "number"}},
         "Expected CPM": {
             "formula": {
                 "expression": (
@@ -155,6 +154,7 @@ REMOVE_PROPERTIES = {
         "Budget",
         "Fixed Cost",
         "Cost/Budget",
+        "Fixed Rate",
         "Configuration Notes",
         "List Price",
         "Price Currency",
