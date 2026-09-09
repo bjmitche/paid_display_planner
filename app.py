@@ -85,6 +85,7 @@ with st.sidebar:
         try:
             st.session_state["planner_data"] = load_data()
             st.session_state.pop("scenario_activations", None)
+            st.session_state.pop("scenario_product_ids", None)
             st.success("Notion data loaded.")
         except Exception as exc:
             st.error(f"Notion load failed: {exc}")
@@ -153,18 +154,38 @@ selected_ids = st.multiselect(
 selected = [all_activation_map[item_id] for item_id in selected_ids]
 
 product_options = list(products.values())
-product_names = [item.name for item in product_options]
 
 st.subheader("4. Product parameters")
-product_ids = list(
+scenario_product_ids = st.session_state.setdefault("scenario_product_ids", {})
+automatic_product_ids = tuple(
     dict.fromkeys(
         campaign.product_ids + tuple(item.product_id for item in selected if item.product_id)
     )
 )
-if not product_ids and product_options:
-    product_ids = [product_options[0].id]
+added_product_ids = scenario_product_ids.setdefault(campaign.id, [])
+selected_product_ids = list(dict.fromkeys(automatic_product_ids + tuple(added_product_ids)))
+product_add_options = [item for item in product_options if item.id not in selected_product_ids]
+if product_add_options:
+    add_product = st.selectbox(
+        "Add a Product to this scenario",
+        product_add_options,
+        format_func=lambda item: item.name,
+        key=f"add_product_{campaign.id}",
+    )
+    if st.button("Add Product to scenario"):
+        added_product_ids.append(add_product.id)
+        st.rerun()
+else:
+    st.caption("All available Products are already selected for this scenario.")
+if selected_product_ids:
+    st.caption(
+        "Selected Products: "
+        + ", ".join(products[product_id].name for product_id in selected_product_ids)
+    )
+product_options = [products[product_id] for product_id in selected_product_ids]
+product_names = [item.name for item in product_options]
 product_overrides: dict[str, Product] = {}
-for product_id in product_ids:
+for product_id in selected_product_ids:
     base_product = products[product_id]
     product_card = st.container(border=True)
     product_card.markdown(f"### {base_product.name}")
