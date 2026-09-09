@@ -60,8 +60,7 @@ MODEL: dict[str, dict[str, Any]] = {
         "CPM Sigma %": {"number": {"format": "percent"}},
         "CPC Sigma %": {"number": {"format": "percent"}},
         "CPV Sigma %": {"number": {"format": "percent"}},
-        "Start Date": {"date": {}},
-        "End Date": {"date": {}},
+        "Standard Period": {"rich_text": {}},
         "Configuration Notes": {"rich_text": {}},
         "Expected Cost": {"number": {"format": "number"}},
         "Expected Impressions": {"number": {"format": "number"}},
@@ -92,6 +91,8 @@ MODEL: dict[str, dict[str, Any]] = {
 REMOVE_PROPERTIES = {
     "inventory": {
         "Active",
+        "Start Date",
+        "End Date",
         "Manual Expected Cost",
         "Manual Expected Impressions",
         "Manual Expected View Rate",

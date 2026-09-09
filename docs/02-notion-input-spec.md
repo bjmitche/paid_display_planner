@@ -39,7 +39,8 @@ These are the only Inventory properties required by the planner itself:
 | Expected CPC | `Expected CPC` | Number | Algorithmic clicks objective | Expected algorithmic CPC. |
 | Expected CPV | `Expected CPV` | Number | Algorithmic video-view objective | Expected algorithmic CPV. |
 | CPM/CPC/CPV Sigma | `CPM Sigma %`, `CPC Sigma %`, `CPV Sigma %` | Number | Algorithmic model | Uncertainty for the relevant algorithmic rate. |
-| Start/end date | `Start Date`, `End Date` | Date | Recommended | Fixed delivery window. |
+| Standard period | `Standard Period` | Rich text | Recommended | Reusable placement duration or run description, such as `4 weeks`, `1 month`, or `per newsletter send`. |
+| Configuration notes | `Configuration Notes` | Rich text | Recommended | Model-specific guidance or migration notes. |
 | Expected impressions | `Expected Impressions` | Number | New/no-history fallback | Central assumed impressions/reach when historical data is unavailable. |
 | Expected view rate | `Expected View Rate` | Number, percent format | Video/no-history fallback | Central assumed view rate. |
 | Expected CTR | `Expected CTR` | Number, percent format | New/no-history fallback | Central assumed CTR. |
