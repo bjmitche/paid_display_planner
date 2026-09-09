@@ -423,6 +423,11 @@ if st.button("Run simulation", type="primary"):
         hide_index=True,
     )
     st.subheader("Campaign results")
+    st.caption(
+        "Cost per conversion is calculated for each simulation draw as total cost "
+        "÷ total conversions. With fixed cost, it falls as conversions rise; "
+        "Q1, median and Q3 are quartiles of that ratio."
+    )
     unit_by_metric = {
         "impressions": "impressions",
         "views": "views",

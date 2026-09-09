@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from statistics import quantiles
+from statistics import median, quantiles
 
 from .economics import cost_for_activation, estimate_inventory, fx_convert, product_value
 from .models import Activation, Inventory, Product
@@ -131,5 +131,5 @@ def summarise(rows: list[dict[str, float]]) -> dict[str, dict[str, float]]:
             quantiles(values, n=4, method="inclusive")[0],
             quantiles(values, n=4, method="inclusive")[2],
         )
-        result[key] = {"q1": q1, "median": values[len(values) // 2], "q3": q3}
+        result[key] = {"q1": q1, "median": median(values), "q3": q3}
     return result
