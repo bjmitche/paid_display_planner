@@ -235,6 +235,15 @@ for activation in selected:
             f"Performance estimates: {estimate.method}; "
             f"expected view rate {estimate.view_rate * 100:.3f}%"
         )
+        variance_cols = card.columns(4)
+        variance_cols[0].metric(
+            "Impressions variance",
+            f"{estimate.impressions_sigma * 100:.2f}% Sigma",
+        )
+        variance_cols[1].metric(
+            "CTR variance",
+            f"{estimate.ctr_sigma * 100:.2f}% Sigma",
+        )
     default_product_id = activation.product_id or (
         product_options[0].id if product_options else None
     )
