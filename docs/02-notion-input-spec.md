@@ -31,8 +31,7 @@ These are the only Inventory properties required by the planner itself:
 | Buying model | `Buying Model` | Select | Yes | Fixed placement fee, Fixed rate + budget, or Algorithmic budget. |
 | Objective | `Objective` | Select | Yes | Not applicable, Impressions, Clicks, or Video views. |
 | Currency | `Currency` | Select | Yes | Currency for fixed cost, budget, and rates. |
-| Budget | `Budget` | Number | Model-dependent | Fully utilised budget for Fixed rate + budget or Algorithmic budget. |
-| Fixed cost | `Fixed Cost` | Number | Model-dependent | Total fee for Fixed placement fee. |
+| Cost | `Cost` | Number | Yes | Total fixed placement fee or fully utilised budget, interpreted using Buying Model. |
 | Rate basis | `Rate Basis` | Select | Model-dependent | CPM, CPC, or CPV for fixed-rate buying. |
 | Fixed rate | `Fixed Rate` | Number | Model-dependent | Fixed CPM, CPC, or CPV rate. |
 | Expected CPM | `Expected CPM` | Number | Algorithmic impressions objective | Expected algorithmic CPM. |
