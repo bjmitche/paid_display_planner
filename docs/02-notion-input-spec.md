@@ -39,7 +39,7 @@ These are the only Inventory properties required by the planner itself:
 | Expected CPC | `Expected CPC` | Number | Algorithmic clicks objective | Expected algorithmic CPC. |
 | Expected CPV | `Expected CPV` | Number | Algorithmic video-view objective | Expected algorithmic CPV. |
 | CPM/CPC/CPV Sigma | `CPM Sigma %`, `CPC Sigma %`, `CPV Sigma %` | Number | Algorithmic model | Uncertainty for the relevant algorithmic rate. |
-| Standard period | `Standard Period` | Rich text | Recommended | Reusable placement duration or run description, such as `4 weeks`, `1 month`, or `per newsletter send`. |
+| Standard period | `Standard Period` | Select | Recommended | One-off, Daily, Weekly, Monthly, Quarterly, Annual, Per send, or Per placement/run. |
 | Channel | `Channel` | Select | Recommended | Retained operational classification. |
 | Publishers & Brokers | `Publishers & Brokers` | Relation | Recommended | Retained operational relationship. |
 | Targeted | `Targeted` | Select | Recommended | Retained operational targeting classification. |

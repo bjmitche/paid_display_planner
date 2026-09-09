@@ -60,7 +60,20 @@ MODEL: dict[str, dict[str, Any]] = {
         "CPM Sigma %": {"number": {"format": "percent"}},
         "CPC Sigma %": {"number": {"format": "percent"}},
         "CPV Sigma %": {"number": {"format": "percent"}},
-        "Standard Period": {"rich_text": {}},
+        "Standard Period": {
+            "select": {
+                "options": [
+                    {"name": "One-off"},
+                    {"name": "Daily"},
+                    {"name": "Weekly"},
+                    {"name": "Monthly"},
+                    {"name": "Quarterly"},
+                    {"name": "Annual"},
+                    {"name": "Per send"},
+                    {"name": "Per placement/run"},
+                ]
+            }
+        },
         "Expected Impressions": {"number": {"format": "number"}},
         "Expected View Rate": {"number": {"format": "percent"}},
         "Expected CTR": {"number": {"format": "percent"}},

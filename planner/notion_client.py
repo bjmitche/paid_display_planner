@@ -42,7 +42,7 @@ REQUIRED_PROPERTIES: dict[str, dict[str, str]] = {
         "CPM Sigma %": "number",
         "CPC Sigma %": "number",
         "CPV Sigma %": "number",
-        "Standard Period": "rich_text",
+        "Standard Period": "select",
         "Expected View Rate": "number",
         "Expected CTR": "number",
         "Impressions Sigma %": "number",
