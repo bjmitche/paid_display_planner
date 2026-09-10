@@ -248,15 +248,13 @@ for activation in selected:
         f"· {activation.status or 'No status'}"
     )
     cost_cols = card.columns(2)
+    inherited_cost = inventory.cost if inventory and inventory.cost is not None else 0.0
+    initial_cost = activation.cost if activation.cost is not None else inherited_cost
     with cost_cols[0]:
         activation_cost = st.number_input(
             "Activation Cost / Budget",
             min_value=0.0,
-            value=float(
-                activation.cost
-                if activation.cost is not None
-                else (inventory.cost if inventory else 0.0)
-            ),
+            value=float(initial_cost),
             key=f"activation_cost_{activation.id}",
         )
     with cost_cols[1]:
@@ -288,7 +286,7 @@ for activation in selected:
         estimate = estimate_inventory(
             inventory,
             history_by_inventory.get(inventory.id, []),
-            activation.cost,
+            activation_cost,
         )
         metric_cols = card.columns(4)
         metric_cols[0].metric("Buying model", inventory.buying_model or "Not set")
@@ -314,6 +312,9 @@ for activation in selected:
     default_index = next(
         (i for i, item in enumerate(product_options) if item.id == default_product_id), 0
     )
+    product_widget_key = f"product_{activation.id}"
+    if st.session_state.get(product_widget_key) not in product_names:
+        st.session_state.pop(product_widget_key, None)
     chosen_product = card.selectbox(
         f"Product for {activation.name}",
         product_names,
@@ -543,6 +544,8 @@ if st.button("Run simulation", type="primary"):
     )
     campaign_integer_metrics = {"impressions", "views", "clicks", "conversions"}
     campaign_display = campaign_table.copy()
+    for column in ("Unfavorable", "Median", "Favorable"):
+        campaign_display[column] = campaign_display[column].astype(object)
     for row_index, metric in enumerate(campaign_summary):
         number_format = "{:,.0f}" if metric in campaign_integer_metrics else "{:,.2f}"
         for column in ("Unfavorable", "Median", "Favorable"):
