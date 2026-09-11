@@ -61,13 +61,11 @@ def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
 def _histogram(values: list[float], bins: int = 20) -> list[tuple[float, float, int]]:
     if not values:
         return [(0.0, 1.0, 0)] * bins
-    low = min(values)
-    high = max(values)
+    low, high = min(values), max(values)
     width = (high - low) / bins if high > low else 1.0
     counts = [0] * bins
     for value in values:
-        index = min(bins - 1, math.floor((value - low) / width))
-        counts[index] += 1
+        counts[min(bins - 1, math.floor((value - low) / width))] += 1
     return [(low + width * i, low + width * (i + 1), counts[i]) for i in range(bins)]
 
 
@@ -77,6 +75,14 @@ def _quartile(values: list[float], fraction: float) -> float:
     ordered = sorted(values)
     index = min(len(ordered) - 1, max(0, int(len(ordered) * fraction) - 1))
     return ordered[index]
+
+
+def _median(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
 
 
 def build_workbook(
@@ -107,18 +113,20 @@ def build_workbook(
     inputs["C10"] = 42
     inputs["C12"] = "Exported from Paid Display Planner. Values are a read-only scenario snapshot."
 
-    selected_inventory_ids = list(
-        dict.fromkeys(item.inventory_id for item in selected if item.inventory_id)
-    )
-    relevant_inventories = [
-        inventories[inventory_id]
-        for inventory_id in selected_inventory_ids
-        if inventory_id in inventories
-    ]
-    inventory_rows = []
+    selected_inventory_ids = list(dict.fromkeys(a.inventory_id for a in selected if a.inventory_id))
+    relevant_inventories = [inventories[i] for i in selected_inventory_ids if i in inventories]
+    inventory_rows: list[list[Any]] = []
     for inventory in relevant_inventories:
         history = history_by_inventory.get(inventory.id, [])
-        estimate = estimate_inventory(inventory, history)
+        estimate = estimate_inventory(inventory, history, inventory.cost)
+        valid_impressions = [
+            a.actual_impressions for a in history if a.actual_impressions is not None
+        ]
+        valid_views = [a.actual_video_views for a in history if a.actual_video_views is not None]
+        valid_clicks = [a.actual_clicks for a in history if a.actual_clicks is not None]
+        hist_total_impressions = sum(valid_impressions)
+        hist_total_views = sum(valid_views)
+        hist_total_clicks = sum(valid_clicks)
         inventory_rows.append(
             [
                 inventory.id,
@@ -128,53 +136,60 @@ def build_workbook(
                 sum(a.actual_impressions is not None for a in history),
                 sum(a.actual_video_views is not None for a in history),
                 sum(a.actual_clicks is not None for a in history),
-                estimate.impressions,
-                sum(a.actual_impressions or 0 for a in history),
-                sum(a.actual_video_views or 0 for a in history),
-                sum(a.actual_clicks or 0 for a in history),
-                estimate.view_rate,
-                estimate.ctr,
+                _median(valid_impressions),
+                hist_total_impressions,
+                hist_total_views,
+                hist_total_clicks,
+                hist_total_views / hist_total_impressions if hist_total_impressions else 0,
+                hist_total_clicks / hist_total_impressions if hist_total_impressions else 0,
                 inventory.expected_impressions or 0,
                 inventory.expected_view_rate or 0,
                 inventory.expected_ctr or 0,
                 inventory.impressions_sigma or 0,
                 inventory.view_rate_sigma or 0,
                 inventory.ctr_sigma or 0,
-                estimate.impressions,
-                estimate.view_rate,
-                estimate.ctr,
+                1 if valid_impressions else 0,
+                1 if valid_views else 0,
+                1 if valid_clicks else 0,
                 estimate.impressions,
                 estimate.view_rate,
                 estimate.ctr,
                 estimate.method,
-                "Exported historical/fallback estimate",
+                "Historical target-rate estimate with Inventory fallback where required.",
             ]
         )
 
-    product_rows = []
-    for product in {p.id: p for p in product_overrides.values()}.values():
-        product_rows.append(
-            [
-                product.id,
-                product.name,
-                product.currency,
-                product.average_purchase_amount or 0,
-                product.gross_margin_pct or 0,
-                product.holding_period or 0,
-                product.ltv or 0,
-                fx_rates.get(product.currency or target_currency, 1.0),
-                "Loaded from Notion with any Streamlit override applied.",
-            ]
-        )
+    used_product_ids = list(dict.fromkeys(a.product_id for a in selected if a.product_id))
+    used_products = [
+        product_overrides.get(i) or products[i]
+        for i in used_product_ids
+        if i in products or i in product_overrides
+    ]
+    product_rows = [
+        [
+            p.id,
+            p.name,
+            p.currency,
+            p.average_purchase_amount or 0,
+            p.gross_margin_pct or 0,
+            p.holding_period or 0,
+            p.ltv or 0,
+            fx_rates.get(p.currency or target_currency, 1.0),
+            "Loaded from Notion with Streamlit override applied.",
+        ]
+        for p in used_products
+    ]
 
-    activation_rows = []
+    activation_rows: list[list[Any]] = []
     for activation in selected:
         inventory = inventories.get(activation.inventory_id or "")
         product = product_overrides.get(activation.product_id or "") or products.get(
             activation.product_id or ""
         )
         estimate = (
-            estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
+            estimate_inventory(
+                inventory, history_by_inventory.get(inventory.id, []), activation.cost
+            )
             if inventory
             else None
         )
@@ -190,7 +205,7 @@ def build_workbook(
                 inventory.name if inventory else None,
                 inventory.format if inventory else None,
                 activation.status,
-                inventory.buying_model if inventory else None,
+                inventory.rate_basis if inventory else None,
                 activation.cost,
                 activation.currency,
                 fx_rates.get(activation.currency or target_currency, 1.0),
@@ -212,42 +227,32 @@ def build_workbook(
         )
 
     fx_rows = [
-        [
-            target_currency,
-            target_currency,
-            1.0,
-            "Planner target currency",
-            date.today(),
-            "No",
-            "Identity rate",
-        ]
+        [target_currency, target_currency, 1.0, "Identity", date.today(), "No", "Target currency"]
     ]
-    fx_rows.extend(
+    fx_rows += [
         [
-            currency,
+            c,
             target_currency,
-            rate,
+            r,
             "Frankfurter/ECB preload",
             date.today(),
             "No",
             "Editable source rate",
         ]
-        for currency, rate in fx_rates.items()
-    )
-
-    for start, capacity, count, insert_at in (
-        (52, 0, len(fx_rows), 52),
-        (44, 3, len(product_rows), 44),
-        (37, 8, len(activation_rows), 37),
-        (25, 7, len(inventory_rows), 25),
+        for c, r in fx_rates.items()
+    ]
+    for count, capacity, insert_at in (
+        (len(inventory_rows), 7, 25),
+        (len(activation_rows), 8, 37),
+        (len(product_rows), 3, 44),
+        (len(fx_rows), 4, 52),
     ):
         if count > capacity:
             inputs.insert_rows(insert_at, count - capacity)
-
-    _clear_data(inputs, 17, 23, 27)
-    _clear_data(inputs, 28, 35, 25)
-    _clear_data(inputs, 40, 42, 9)
-    _clear_data(inputs, 47, 50, 7)
+    _clear_data(inputs, 17, 23 + max(0, len(inventory_rows) - 7), 27)
+    _clear_data(inputs, 28, 35 + max(0, len(activation_rows) - 8), 25)
+    _clear_data(inputs, 40, 42 + max(0, len(product_rows) - 3), 9)
+    _clear_data(inputs, 47, 50 + max(0, len(fx_rows) - 4), 7)
     _write_rows(inputs, 17, inventory_rows, 17, 27)
     _write_rows(inputs, 28, activation_rows, 28, 25)
     _write_rows(inputs, 40, product_rows, 40, 9)
@@ -257,154 +262,139 @@ def build_workbook(
     inputs.tables["Products"].ref = f"A39:I{39 + len(product_rows)}"
     inputs.tables["FXRates"].ref = f"A46:G{46 + len(fx_rows)}"
 
-    activation_headers = [
-        "Activation ID",
+    detail_headers = [
+        "Iteration",
         "Activation",
-        "Source",
-        "Inventory",
-        "Product",
-        "Status",
-        "Pricing model",
+        "Impressions",
+        "View rate",
+        "Views",
+        "CTR",
+        "Clicks",
+        "Conversions",
         "Cost",
-        "Currency",
-        "Expected impressions",
-        "Expected view rate %",
-        "Expected CTR %",
-        "Conv / impression %",
-        "Conv / view %",
-        "Conv / click %",
-        "Conversion Sigma %",
-        "Actual impressions",
-        "Actual video views",
-        "Actual clicks",
-        "Actual view rate %",
-        "Actual CTR %",
-        "Sim impressions Q1",
-        "Sim impressions median",
-        "Sim impressions Q3",
-        "Sim views median",
-        "Sim clicks median",
-        "Sim engagements median",
-        "Sim conversions Q1",
-        "Sim conversions median",
-        "Sim conversions Q3",
-        "Sim flows median",
-        "Sim LTV median",
-        "Sim cost median",
-        "Sim ROI median",
-        "Estimation method",
+        "Flows",
+        "LTV value",
+        "ROI",
+        "Cost per conversion",
+        "Product",
+        "Notes",
+        "z — impressions",
+        "z — view rate",
+        "z — CTR",
+        "z — conversion",
     ]
-    activation_summary_rows = []
+    detail_rows: list[list[Any]] = []
     for activation, rows in activation_simulations:
-        inventory = inventories.get(activation.inventory_id or "")
         product = product_overrides.get(activation.product_id or "") or products.get(
             activation.product_id or ""
         )
-        estimate = (
-            estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
-            if inventory
-            else None
-        )
-        imp, view, click, sigma = conversion_by_activation[activation.id]
-        activation_summary_rows.append(
-            [
-                activation.id,
-                activation.name,
-                "Scenario activation"
-                if activation.id.startswith("scenario:")
-                else "Campaign activation",
-                inventory.name if inventory else None,
-                product.name if product else None,
-                activation.status,
-                inventory.buying_model if inventory else None,
-                activation.cost,
-                activation.currency,
-                estimate.impressions if estimate else None,
-                estimate.view_rate if estimate else None,
-                estimate.ctr if estimate else None,
-                imp,
-                view,
-                click,
-                sigma,
-                activation.actual_impressions,
-                activation.actual_video_views,
-                activation.actual_clicks,
-                activation.actual_video_views / activation.actual_impressions
-                if activation.actual_video_views is not None and activation.actual_impressions
-                else None,
-                activation.actual_clicks / activation.actual_impressions
-                if activation.actual_clicks is not None and activation.actual_impressions
-                else None,
-                _quartile([r["impressions"] for r in rows], 0.25),
-                _quartile([r["impressions"] for r in rows], 0.50),
-                _quartile([r["impressions"] for r in rows], 0.75),
-                _quartile([r["views"] for r in rows], 0.50),
-                _quartile([r["clicks"] for r in rows], 0.50),
-                _quartile([r["views"] + r["clicks"] for r in rows], 0.50),
-                _quartile([r["conversions"] for r in rows], 0.25),
-                _quartile([r["conversions"] for r in rows], 0.50),
-                _quartile([r["conversions"] for r in rows], 0.75),
-                _quartile([r["flows"] for r in rows], 0.50),
-                _quartile([r["value"] for r in rows], 0.50),
-                _quartile([r["cost"] for r in rows], 0.50),
-                _quartile([r["roi"] for r in rows], 0.50),
-                estimate.method if estimate else "Unavailable",
-            ]
-        )
-    _clear_data(activation_detail, 3, activation_detail.max_row, 35)
-    _write_rows(activation_detail, 3, [activation_headers] + activation_summary_rows, 3, 35)
+        for iteration, row in enumerate(rows, 1):
+            detail_rows.append(
+                [
+                    iteration,
+                    activation.name,
+                    row["impressions"],
+                    row["views"] / row["impressions"] if row["impressions"] else 0,
+                    row["views"],
+                    row["clicks"] / row["impressions"] if row["impressions"] else 0,
+                    row["clicks"],
+                    row["conversions"],
+                    row["cost"],
+                    row["flows"],
+                    row["value"],
+                    row["roi"],
+                    row["cost"] / row["conversions"] if row["conversions"] else 0,
+                    product.name if product else None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ]
+            )
+    _clear_data(activation_detail, 3, activation_detail.max_row, 19)
+    _write_rows(activation_detail, 3, [detail_headers] + detail_rows, 3, 19)
     _replace_table(
-        activation_detail,
-        "ActivationDetail",
-        "ActivationSummary",
-        f"A3:AI{3 + len(activation_summary_rows)}",
+        activation_detail, "ActivationDetail", "ActivationDetail", f"A3:S{3 + len(detail_rows)}"
     )
 
-    simulation_headers = ["Metric", "Unit", "Ex-post", "Q1", "Median", "Q3", "Definition"]
-    ex_post = {
-        "impressions": sum(a.actual_impressions or 0 for a in selected),
-        "views": sum(a.actual_video_views or 0 for a in selected),
-        "clicks": sum(a.actual_clicks or 0 for a in selected),
-    }
-    simulation_rows = []
-    for label, key, unit, definition in (
-        ("Impressions", "impressions", "count", "Distributed impressions"),
-        ("Views", "views", "count", "Recorded video views"),
-        ("Clicks", "clicks", "count", "Recorded clicks"),
-        ("Conversions", "conversions", "count", "Simulation conversion output"),
-        ("Flows", "flows", target_currency, "Conversions × average purchase amount"),
-        ("Cost", "cost", target_currency, "Deterministic fixed, CPM or CPC cost"),
-        ("LTV value", "value", target_currency, "Conversions × derived LTV"),
-        ("ROI", "roi", "x", "LTV value ÷ cost"),
-    ):
-        values = [row[key] for row in campaign_rows] if campaign_rows else []
-        simulation_rows.append(
+    product_ids = used_product_ids[:3]
+    sim_headers = [
+        "Iteration",
+        "Total impressions",
+        "Total views",
+        "Total clicks",
+        "Total conversions",
+        "Total cost",
+        "Total flows",
+        "Total LTV value",
+        "ROI",
+        "Cost per conversion",
+        "View rate %",
+        "CTR %",
+        "Notes",
+    ]
+    for pid in product_ids:
+        sim_headers.extend(
             [
-                label,
-                unit,
-                ex_post.get(key),
-                _quartile(values, 0.25),
-                _quartile(values, 0.50),
-                _quartile(values, 0.75),
-                definition,
+                f"{pid} conversions",
+                f"{pid} flows",
+                f"{pid} LTV value",
+                f"{pid} cost",
+                f"{pid} ROI",
+                f"{pid} cost per conversion",
             ]
         )
-    _clear_data(simulation_detail, 3, simulation_detail.max_row, 12)
-    _write_rows(simulation_detail, 3, [simulation_headers] + simulation_rows, 3, 7)
+    sim_headers += [f"Reserved {i}" for i in range(31 - len(sim_headers))]
+    sim_rows: list[list[Any]] = []
+    for i, campaign_row in enumerate(campaign_rows, 1):
+        total_impressions = campaign_row["impressions"]
+        total_views = campaign_row["views"]
+        total_clicks = campaign_row["clicks"]
+        values: list[Any] = [
+            i,
+            total_impressions,
+            total_views,
+            total_clicks,
+            campaign_row["conversions"],
+            campaign_row["cost"],
+            campaign_row["flows"],
+            campaign_row["value"],
+            campaign_row["roi"],
+            campaign_row["cost_per_conversion"],
+            total_views / total_impressions if total_impressions else 0,
+            total_clicks / total_impressions if total_impressions else 0,
+            None,
+        ]
+        for pid in product_ids:
+            pr = {"conversions": 0.0, "flows": 0.0, "value": 0.0, "cost": 0.0}
+            for activation, rows in activation_simulations:
+                if activation.product_id == pid:
+                    row = rows[i - 1]
+                    for key in pr:
+                        pr[key] += row["value" if key == "value" else key]
+            values += [
+                pr["conversions"],
+                pr["flows"],
+                pr["value"],
+                pr["cost"],
+                pr["value"] / pr["cost"] if pr["cost"] else 0,
+                pr["cost"] / pr["conversions"] if pr["conversions"] else 0,
+            ]
+        sim_rows.append(values + [None] * (31 - len(values)))
+    _clear_data(simulation_detail, 3, simulation_detail.max_row, 31)
+    _write_rows(simulation_detail, 3, [sim_headers] + sim_rows, 3, 31)
     _replace_table(
-        simulation_detail,
-        "SimulationDetail",
-        "SimulationSummary",
-        f"A3:G{3 + len(simulation_rows)}",
+        simulation_detail, "SimulationDetail", "SimulationDetail", f"A3:AE{3 + len(sim_rows)}"
     )
 
     summary["B5"] = campaign.name
     summary["B6"] = "Streamlit scenario"
     summary["B7"] = target_currency
     summary["B8"] = len(selected)
-    summary["B9"] = len(product_overrides)
+    summary["B9"] = len(used_products)
     summary["B10"] = iterations
-    campaign_metrics = {
+    metric_map = {
         "Impressions": "impressions",
         "Video views": "views",
         "Clicks": "clicks",
@@ -415,100 +405,42 @@ def build_workbook(
         "LTV value": "value",
         "ROI": "roi",
     }
-    summary["B14"] = "Unfavorable"
-    summary["C14"] = "Median"
-    summary["D14"] = "Favorable"
-    direction_by_metric = {
-        "impressions": "Higher is better",
-        "views": "Higher is better",
-        "clicks": "Higher is better",
-        "conversions": "Higher is better",
-        "cost": "Lower is better",
-        "flows": "Higher is better",
-        "value": "Higher is better",
-        "roi": "Higher is better",
-        "cost_per_conversion": "Lower is better",
-    }
-    for row, (label, key) in enumerate(campaign_metrics.items(), 15):
-        values = sorted(item[key] for item in campaign_rows) if campaign_rows else [0]
-        q1 = values[max(0, int(len(values) * 0.25) - 1)]
-        q3 = values[max(0, int(len(values) * 0.75) - 1)]
+    direction = {"cost": "lower", "cost_per_conversion": "lower"}
+    for row, (label, key) in enumerate(metric_map.items(), 15):
+        values = [r[key] for r in campaign_rows] or [0]
+        q1, med, q3 = _quartile(values, 0.25), _quartile(values, 0.5), _quartile(values, 0.75)
         summary.cell(row, 1).value = label
-        summary.cell(row, 2).value = q1 if direction_by_metric[key] == "Higher is better" else q3
-        summary.cell(row, 3).value = _quartile(values, 0.50)
-        summary.cell(row, 4).value = q3 if direction_by_metric[key] == "Higher is better" else q1
-        unit = (
-            target_currency
-            if key in {"cost", "flows", "value", "cost_per_conversion"}
-            else "x"
-            if key == "roi"
-            else "count"
+        summary.cell(row, 2).value = q3 if direction.get(key) == "lower" else q1
+        summary.cell(row, 3).value = med
+        summary.cell(row, 4).value = q1 if direction.get(key) == "lower" else q3
+        summary.cell(row, 5).value = (
+            "Lower is better" if direction.get(key) == "lower" else "Higher is better"
         )
-        summary.cell(row, 5).value = f"{direction_by_metric[key]}; unit: {unit}"
 
-    for summary_row, metric in ((24, "LTV value"), (25, "ROI")):
-        for column, statistic in ((2, "D"), (3, "E"), (4, "F")):
-            summary.cell(summary_row, column).value = (
-                f"=INDEX('Simulation Detail'!${statistic}:${statistic},"
-                f"MATCH(\"{metric}\",'Simulation Detail'!$A:$A,0))"
-            )
-
-    if len(activation_simulations) > 8:
-        summary.insert_rows(37, len(activation_simulations) - 8)
-    activation_summary_rows = []
-    for activation, rows in activation_simulations:
-        inventory = inventories.get(activation.inventory_id or "")
-        product = product_overrides.get(activation.product_id or "") or products.get(
-            activation.product_id or ""
-        )
-        estimate = (
-            estimate_inventory(inventory, history_by_inventory.get(inventory.id, []))
-            if inventory
-            else None
-        )
-        activation_summary_rows.append(
-            [
-                activation.name,
-                "Scenario activation"
-                if activation.id.startswith("scenario:")
-                else "Campaign activation",
-                inventory.name if inventory else None,
-                product.name if product else None,
-                estimate.method if estimate else "Unavailable",
-                estimate.impressions if estimate else None,
-                estimate.view_rate if estimate else None,
-                estimate.ctr if estimate else None,
-                _quartile([r["conversions"] for r in rows], 0.50),
-                _quartile([r["conversions"] for r in rows], 0.25),
-                _quartile([r["conversions"] for r in rows], 0.75),
-                _quartile([r["flows"] for r in rows], 0.50),
-                _quartile([r["value"] for r in rows], 0.50),
-                _quartile([r["cost"] for r in rows], 0.50),
-                _quartile([r["roi"] for r in rows], 0.50),
-                _quartile(
-                    [r["cost"] / r["conversions"] if r["conversions"] else 0 for r in rows],
-                    0.50,
-                ),
-            ]
-        )
-    _clear_data(summary, 29, 36 + max(0, len(activation_simulations) - 8), 16)
-    _write_rows(summary, 29, activation_summary_rows, 29, 16)
-    conversion_bins = _histogram([row["conversions"] for row in campaign_rows])
-    roi_bins = _histogram([row["roi"] for row in campaign_rows])
+    conversion_bins = _histogram([r["conversions"] for r in campaign_rows])
+    roi_bins = _histogram([r["roi"] for r in campaign_rows])
     summary["A83"] = (
         "Fixed histogram bins: 20 equal-width bins per distribution; "
         "final bin includes the maximum."
     )
     for offset, (start, end, count) in enumerate(conversion_bins, 85):
-        summary.cell(offset, 1).value = start
-        summary.cell(offset, 2).value = end
-        summary.cell(offset, 3).value = f"{start:,.2f}"
-        summary.cell(offset, 4).value = count
-    for offset, (start, end, count) in enumerate(roi_bins, 85):
-        summary.cell(offset, 6).value = start
-        summary.cell(offset, 7).value = end
-        summary.cell(offset, 8).value = f"{start:,.2f}"
-        summary.cell(offset, 9).value = count
+        (
+            summary.cell(offset, 1).value,
+            summary.cell(offset, 2).value,
+            summary.cell(offset, 3).value,
+            summary.cell(offset, 4).value,
+        ) = start, end, f"{start:,.2f}", count
+        (
+            summary.cell(offset, 6).value,
+            summary.cell(offset, 7).value,
+            summary.cell(offset, 8).value,
+            summary.cell(offset, 9).value,
+        ) = (
+            roi_bins[offset - 85][0],
+            roi_bins[offset - 85][1],
+            f"{roi_bins[offset - 85][0]:,.2f}",
+            roi_bins[offset - 85][2],
+        )
 
     output = BytesIO()
     workbook.calculation.fullCalcOnLoad = True
