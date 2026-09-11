@@ -453,13 +453,96 @@ def build_workbook(
             "Lower is better" if direction.get(key) == "lower" else "Higher is better"
         )
 
+    activation_performance_headers = [
+        "Activation name",
+        "Source",
+        "Inventory",
+        "Product",
+        "Estimation method",
+        "Expected impressions",
+        "Expected view rate %",
+        "Expected CTR %",
+        "Conversions — median",
+        "Conversions — Q1",
+        "Conversions — Q3",
+        "Flows — median",
+        "LTV value — median",
+        "Cost — median",
+        "ROI — median",
+        "Cost per conversion — median",
+    ]
+    activation_performance_rows = []
+    for activation, rows in activation_simulations:
+        inventory = inventories.get(activation.inventory_id or "")
+        product = product_by_activation.get(activation.id) or products.get(
+            activation.product_id or ""
+        )
+        estimate = (
+            estimate_inventory(
+                inventory,
+                history_by_inventory.get(inventory.id, []),
+                activation.cost,
+            )
+            if inventory
+            else None
+        )
+        activation_performance_rows.append(
+            [
+                activation.name,
+                "Scenario activation"
+                if activation.id.startswith("scenario:")
+                else "Campaign activation",
+                inventory.name if inventory else None,
+                product.name if product else None,
+                estimate.method if estimate else "Unavailable",
+                estimate.impressions if estimate else None,
+                estimate.view_rate if estimate else None,
+                estimate.ctr if estimate else None,
+                _quartile([row["conversions"] for row in rows], 0.50),
+                _quartile([row["conversions"] for row in rows], 0.25),
+                _quartile([row["conversions"] for row in rows], 0.75),
+                _quartile([row["flows"] for row in rows], 0.50),
+                _quartile([row["value"] for row in rows], 0.50),
+                _quartile([row["cost"] for row in rows], 0.50),
+                _quartile([row["roi"] for row in rows], 0.50),
+                _quartile(
+                    [row["cost"] / row["conversions"] if row["conversions"] else 0 for row in rows],
+                    0.50,
+                ),
+            ]
+        )
+    extra_activation_performance = max(0, len(activation_performance_rows) - 8)
+    if extra_activation_performance:
+        summary.insert_rows(44, extra_activation_performance)
+    _clear_data(
+        summary,
+        35,
+        43 + extra_activation_performance,
+        len(activation_performance_headers),
+    )
+    _write_rows(
+        summary,
+        35,
+        [activation_performance_headers] + activation_performance_rows,
+        35,
+        len(activation_performance_headers),
+    )
+    _replace_table(
+        summary,
+        "ActivationPerformance",
+        "ActivationPerformance",
+        f"A35:P{35 + len(activation_performance_rows)}",
+    )
+
     conversion_bins = _histogram([r["conversions"] for r in campaign_rows])
     roi_bins = _histogram([r["roi"] for r in campaign_rows])
-    summary["A83"] = (
+    histogram_note_row = 83 + extra_activation_performance
+    histogram_start_row = 85 + extra_activation_performance
+    summary.cell(histogram_note_row, 1).value = (
         "Fixed histogram bins: 20 equal-width bins per distribution; "
         "final bin includes the maximum."
     )
-    for offset, (start, end, count) in enumerate(conversion_bins, 85):
+    for offset, (start, end, count) in enumerate(conversion_bins, histogram_start_row):
         (
             summary.cell(offset, 1).value,
             summary.cell(offset, 2).value,
@@ -472,10 +555,10 @@ def build_workbook(
             summary.cell(offset, 8).value,
             summary.cell(offset, 9).value,
         ) = (
-            roi_bins[offset - 85][0],
-            roi_bins[offset - 85][1],
-            f"{roi_bins[offset - 85][0]:,.2f}",
-            roi_bins[offset - 85][2],
+            roi_bins[offset - histogram_start_row][0],
+            roi_bins[offset - histogram_start_row][1],
+            f"{roi_bins[offset - histogram_start_row][0]:,.2f}",
+            roi_bins[offset - histogram_start_row][2],
         )
 
     output = BytesIO()

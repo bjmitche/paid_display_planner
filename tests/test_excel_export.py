@@ -81,6 +81,8 @@ def test_build_workbook_populates_template():
         loaded["Model Inputs & Assumptions"].tables["FXRates"].autoFilter.ref
         == loaded["Model Inputs & Assumptions"].tables["FXRates"].ref
     )
+    assert loaded["Performance Summary"].tables["ActivationPerformance"].ref == "A35:P36"
+    assert loaded["Performance Summary"]["D36"].value == "Product"
     assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:S6"
     assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:AE6"
     assert sum(loaded["Performance Summary"].cell(row, 4).value for row in range(85, 105)) == 3
