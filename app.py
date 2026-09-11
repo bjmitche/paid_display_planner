@@ -360,7 +360,7 @@ for activation in selected:
             "Conversion Sigma (%)",
             min_value=0.0,
             max_value=1000.0,
-            value=0.0,
+            value=50.0,
             format="%.4f",
             key=f"sigma_{activation.id}",
         )
