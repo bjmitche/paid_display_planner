@@ -98,6 +98,7 @@ def build_workbook(
     inventories: dict[str, Inventory],
     products: dict[str, Product],
     product_overrides: dict[str, Product],
+    product_by_activation: dict[str, Product],
     history_by_inventory: dict[str, list[Activation]],
     conversion_by_activation: dict[str, tuple[float, float, float, float]],
     target_currency: str,
@@ -166,7 +167,7 @@ def build_workbook(
             ]
         )
 
-    used_product_ids = list(dict.fromkeys(a.product_id for a in selected if a.product_id))
+    used_product_ids = list(dict.fromkeys(product.id for product in product_by_activation.values()))
     used_products = [
         product_overrides.get(i) or products[i]
         for i in used_product_ids
@@ -190,8 +191,10 @@ def build_workbook(
     activation_rows: list[list[Any]] = []
     for activation in selected:
         inventory = inventories.get(activation.inventory_id or "")
-        product = product_overrides.get(activation.product_id or "") or products.get(
-            activation.product_id or ""
+        product = (
+            product_by_activation.get(activation.id)
+            or product_overrides.get(activation.product_id or "")
+            or products.get(activation.product_id or "")
         )
         estimate = (
             estimate_inventory(
@@ -316,8 +319,10 @@ def build_workbook(
     ]
     detail_rows: list[list[Any]] = []
     for activation, rows in activation_simulations:
-        product = product_overrides.get(activation.product_id or "") or products.get(
-            activation.product_id or ""
+        product = (
+            product_by_activation.get(activation.id)
+            or product_overrides.get(activation.product_id or "")
+            or products.get(activation.product_id or "")
         )
         for iteration, row in enumerate(rows, 1):
             detail_rows.append(

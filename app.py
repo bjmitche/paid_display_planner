@@ -576,6 +576,7 @@ if st.button("Run simulation", type="primary"):
         inventories,
         products,
         product_overrides,
+        product_by_activation,
         history,
         conversion_by_activation,
         target_currency,

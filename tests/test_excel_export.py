@@ -51,6 +51,7 @@ def test_build_workbook_populates_template():
         {"i": inventory},
         {"p": product},
         {"p": product},
+        {"a": product},
         {"i": [activation]},
         {"a": (0.0, 0.0, 0.01, 0.1)},
         "EUR",
@@ -68,8 +69,9 @@ def test_build_workbook_populates_template():
         "Activation Detail",
         "Simulation Detail",
     ]
-    assert loaded["Model Inputs & Assumptions"]["C5"].value == "Campaign"
-    assert loaded["Model Inputs & Assumptions"].tables["Activations"].ref == "A27:Y28"
+    assert loaded["Model Inputs & Assumptions"]["L28"].value == "p"
+    assert loaded["Activation Detail"]["N4"].value == "Product"
+    assert loaded["Simulation Detail"]["N4"].value == 1.0
     assert loaded["Model Inputs & Assumptions"].tables["Activations"].autoFilter.ref == "A27:Y28"
     assert (
         loaded["Model Inputs & Assumptions"].tables["Products"].autoFilter.ref
