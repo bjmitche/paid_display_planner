@@ -235,6 +235,7 @@ history_by_inventory = {
 product_by_activation: dict[str, Product] = {}
 conversion_by_activation: dict[str, tuple[float, float, float, float]] = {}
 activation_rows = []
+edited_activations: dict[str, Activation] = {}
 for activation in selected:
     inventory = inventories.get(activation.inventory_id)
     estimate = None
@@ -282,6 +283,7 @@ for activation in selected:
         activation.actual_video_views,
         activation.actual_clicks,
     )
+    edited_activations[activation.id] = activation
     if inventory:
         estimate = estimate_inventory(
             inventory,
@@ -422,6 +424,9 @@ if st.button("Run simulation", type="primary"):
     activation_simulations = []
     summaries = []
     for activation in selected:
+        edited_activation = edited_activations.get(activation.id)
+        if edited_activation is not None:
+            activation = edited_activation
         inventory = inventories.get(activation.inventory_id)
         if not inventory:
             continue
@@ -444,7 +449,11 @@ if st.button("Run simulation", type="primary"):
             config,
         )
         summary = summarise(rows)
-        estimate = estimate_inventory(inventory, history.get(inventory.id, []))
+        estimate = estimate_inventory(
+            inventory,
+            history.get(inventory.id, []),
+            activation.cost,
+        )
         summaries.append(
             {
                 "Activation": activation.name,
