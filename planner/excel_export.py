@@ -241,26 +241,36 @@ def build_workbook(
         ]
         for c, r in fx_rates.items()
     ]
-    for count, capacity, insert_at in (
-        (len(inventory_rows), 7, 25),
-        (len(activation_rows), 8, 37),
-        (len(product_rows), 3, 44),
-        (len(fx_rows), 4, 52),
-    ):
-        if count > capacity:
-            inputs.insert_rows(insert_at, count - capacity)
-    _clear_data(inputs, 17, 23 + max(0, len(inventory_rows) - 7), 27)
-    _clear_data(inputs, 28, 35 + max(0, len(activation_rows) - 8), 25)
-    _clear_data(inputs, 40, 42 + max(0, len(product_rows) - 3), 9)
-    _clear_data(inputs, 47, 50 + max(0, len(fx_rows) - 4), 7)
+    extra_inventory = max(0, len(inventory_rows) - 7)
+    extra_activations = max(0, len(activation_rows) - 8)
+    extra_products = max(0, len(product_rows) - 3)
+    extra_fx = max(0, len(fx_rows) - 4)
+    # Insert from the bottom upward so earlier insertion does not invalidate anchors.
+    if extra_fx:
+        inputs.insert_rows(51, extra_fx)
+    if extra_products:
+        inputs.insert_rows(43, extra_products)
+    if extra_activations:
+        inputs.insert_rows(36, extra_activations)
+    if extra_inventory:
+        inputs.insert_rows(24, extra_inventory)
+    activation_start = 28 + extra_inventory
+    product_start = 40 + extra_inventory + extra_activations
+    fx_start = 47 + extra_inventory + extra_activations + extra_products
+    _clear_data(inputs, 17, 23 + extra_inventory, 27)
+    _clear_data(inputs, activation_start, activation_start + 7 + extra_activations, 25)
+    _clear_data(inputs, product_start, product_start + 2 + extra_products, 9)
+    _clear_data(inputs, fx_start, fx_start + 3 + extra_fx, 7)
     _write_rows(inputs, 17, inventory_rows, 17, 27)
-    _write_rows(inputs, 28, activation_rows, 28, 25)
-    _write_rows(inputs, 40, product_rows, 40, 9)
-    _write_rows(inputs, 47, fx_rows, 47, 7)
+    _write_rows(inputs, activation_start, activation_rows, activation_start, 25)
+    _write_rows(inputs, product_start, product_rows, product_start, 9)
+    _write_rows(inputs, fx_start, fx_rows, fx_start, 7)
     inputs.tables["InventoryEstimates"].ref = f"A16:AA{16 + len(inventory_rows)}"
-    inputs.tables["Activations"].ref = f"A27:Y{27 + len(activation_rows)}"
-    inputs.tables["Products"].ref = f"A39:I{39 + len(product_rows)}"
-    inputs.tables["FXRates"].ref = f"A46:G{46 + len(fx_rows)}"
+    inputs.tables[
+        "Activations"
+    ].ref = f"A{activation_start - 1}:Y{activation_start - 1 + len(activation_rows)}"
+    inputs.tables["Products"].ref = f"A{product_start - 1}:I{product_start - 1 + len(product_rows)}"
+    inputs.tables["FXRates"].ref = f"A{fx_start - 1}:G{fx_start - 1 + len(fx_rows)}"
 
     detail_headers = [
         "Iteration",
