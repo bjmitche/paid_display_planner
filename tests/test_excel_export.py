@@ -70,15 +70,22 @@ def test_build_workbook_populates_template():
     ]
     assert loaded["Model Inputs & Assumptions"]["C5"].value == "Campaign"
     assert loaded["Model Inputs & Assumptions"].tables["Activations"].ref == "A27:Y28"
+    assert loaded["Model Inputs & Assumptions"].tables["Activations"].autoFilter.ref == "A27:Y28"
+    assert (
+        loaded["Model Inputs & Assumptions"].tables["Products"].autoFilter.ref
+        == loaded["Model Inputs & Assumptions"].tables["Products"].ref
+    )
+    assert (
+        loaded["Model Inputs & Assumptions"].tables["FXRates"].autoFilter.ref
+        == loaded["Model Inputs & Assumptions"].tables["FXRates"].ref
+    )
     assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:S6"
     assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:AE6"
     assert sum(loaded["Performance Summary"].cell(row, 4).value for row in range(85, 105)) == 3
     assert sum(loaded["Performance Summary"].cell(row, 9).value for row in range(85, 105)) == 3
     assert (
-        loaded["Performance Summary"]["B24"].value
-        == "=QUARTILE('Simulation Detail'!$H$4:$H$503,1)"
+        loaded["Performance Summary"]["B24"].value == "=QUARTILE('Simulation Detail'!$H$4:$H$503,1)"
     )
     assert (
-        loaded["Performance Summary"]["C25"].value
-        == "=QUARTILE('Simulation Detail'!$I$4:$I$503,2)"
+        loaded["Performance Summary"]["C25"].value == "=QUARTILE('Simulation Detail'!$I$4:$I$503,2)"
     )

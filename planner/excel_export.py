@@ -52,6 +52,13 @@ def _replace_table(sheet, old_name: str, new_name: str, ref: str) -> None:
     sheet.add_table(table)
 
 
+def _set_table_ref(sheet, name: str, ref: str) -> None:
+    table = sheet.tables[name]
+    table.ref = ref
+    if table.autoFilter is not None:
+        table.autoFilter.ref = ref
+
+
 def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
     for row in range(start_row, end_row + 1):
         for column in range(1, max_column + 1):
@@ -265,12 +272,26 @@ def build_workbook(
     _write_rows(inputs, activation_start, activation_rows, activation_start, 25)
     _write_rows(inputs, product_start, product_rows, product_start, 9)
     _write_rows(inputs, fx_start, fx_rows, fx_start, 7)
-    inputs.tables["InventoryEstimates"].ref = f"A16:AA{16 + len(inventory_rows)}"
-    inputs.tables[
-        "Activations"
-    ].ref = f"A{activation_start - 1}:Y{activation_start - 1 + len(activation_rows)}"
-    inputs.tables["Products"].ref = f"A{product_start - 1}:I{product_start - 1 + len(product_rows)}"
-    inputs.tables["FXRates"].ref = f"A{fx_start - 1}:G{fx_start - 1 + len(fx_rows)}"
+    _set_table_ref(
+        inputs,
+        "InventoryEstimates",
+        f"A16:AA{16 + len(inventory_rows)}",
+    )
+    _set_table_ref(
+        inputs,
+        "Activations",
+        f"A{activation_start - 1}:Y{activation_start - 1 + len(activation_rows)}",
+    )
+    _set_table_ref(
+        inputs,
+        "Products",
+        f"A{product_start - 1}:I{product_start - 1 + len(product_rows)}",
+    )
+    _set_table_ref(
+        inputs,
+        "FXRates",
+        f"A{fx_start - 1}:G{fx_start - 1 + len(fx_rows)}",
+    )
 
     detail_headers = [
         "Iteration",
