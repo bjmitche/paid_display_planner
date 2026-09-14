@@ -130,6 +130,16 @@ if not campaigns:
 
 st.subheader("2. Select campaign")
 campaign = st.selectbox("Campaign", campaigns, format_func=lambda item: item.name)
+agency_margin_pct = st.number_input(
+    "Agency margin (%)",
+    min_value=0.0,
+    max_value=99.0,
+    value=0.0,
+    step=0.5,
+    format="%.2f",
+    help="Gross-up applied to media cost: gross cost = net cost ÷ (1 − margin).",
+)
+agency_margin = agency_margin_pct / 100
 base_ids = [item_id for item_id in campaign.activation_ids if item_id in activation_map]
 scenario_activations = st.session_state.setdefault("scenario_activations", [])
 all_activation_map = {**activation_map, **{item.id: item for item in scenario_activations}}
@@ -271,6 +281,11 @@ for activation in selected:
             ),
             key=f"activation_currency_{activation.id}",
         )
+    card.metric(
+        "Gross Activation Cost",
+        f"{activation_cost / (1 - agency_margin):,.2f} {activation_currency}",
+        help="Net Activation Cost grossed up using the Agency margin.",
+    )
     activation = Activation(
         activation.id,
         activation.name,
@@ -440,6 +455,7 @@ if st.button("Run simulation", type="primary"):
             42,
             target_currency,
             fx_rates,
+            agency_margin,
         )
         rows = simulate_activation(
             activation,
@@ -581,6 +597,7 @@ if st.button("Run simulation", type="primary"):
         conversion_by_activation,
         target_currency,
         fx_rates,
+        agency_margin,
         int(iterations),
         activation_simulations,
         campaign_rows,

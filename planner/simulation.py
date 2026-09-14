@@ -5,7 +5,13 @@ import random
 from dataclasses import dataclass
 from statistics import median, quantiles
 
-from .economics import cost_for_activation, estimate_inventory, fx_convert, product_value
+from .economics import (
+    cost_for_activation,
+    estimate_inventory,
+    fx_convert,
+    gross_up_cost,
+    product_value,
+)
 from .models import Activation, Inventory, Product
 
 
@@ -19,6 +25,7 @@ class SimulationInputs:
     seed: int = 42
     target_currency: str = "EUR"
     fx_rates: dict[str, float] | None = None
+    agency_margin: float = 0.0
 
     def __post_init__(self) -> None:
         if self.iterations < 1:
@@ -30,6 +37,8 @@ class SimulationInputs:
         ):
             if value < 0 or value > 1:
                 raise ValueError("conversion rates must be between 0 and 1")
+        if self.agency_margin < 0 or self.agency_margin >= 1:
+            raise ValueError("agency margin must be at least 0% and less than 100%")
 
 
 def _draw_positive(median: float, cv: float, rng: random.Random) -> float:
@@ -84,7 +93,10 @@ def simulate_activation(
         view_rate_conversion = _draw_rate(inputs.conversion_per_view, inputs.conversion_sigma, rng)
         click_rate = _draw_rate(inputs.conversion_per_click, inputs.conversion_sigma, rng)
         conversions = impressions * imp_rate + views * view_rate_conversion + clicks * click_rate
-        cost = fx_convert(cost, activation.currency, inputs.target_currency, rates)
+        cost = gross_up_cost(
+            fx_convert(cost, activation.currency, inputs.target_currency, rates),
+            inputs.agency_margin,
+        )
         flows, value = product_value(product, conversions, inputs.target_currency, rates)
         output.append(
             {

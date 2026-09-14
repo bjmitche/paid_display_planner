@@ -56,6 +56,7 @@ def test_build_workbook_populates_template():
         {"a": (0.0, 0.0, 0.01, 0.1)},
         "EUR",
         {},
+        0.0,
         3,
         [(activation, rows)],
         campaign_rows,

@@ -103,6 +103,7 @@ def build_workbook(
     conversion_by_activation: dict[str, tuple[float, float, float, float]],
     target_currency: str,
     fx_rates: dict[str, float],
+    agency_margin: float,
     iterations: int,
     activation_simulations: list[tuple[Activation, list[dict[str, float]]]],
     campaign_rows: list[dict[str, float]],
@@ -119,7 +120,10 @@ def build_workbook(
     inputs["C8"] = target_currency
     inputs["C9"] = iterations
     inputs["C10"] = 42
-    inputs["C12"] = "Exported from Paid Display Planner. Values are a read-only scenario snapshot."
+    inputs["C12"] = (
+        "Exported from Paid Display Planner. Values are a read-only scenario snapshot. "
+        f"Agency margin: {agency_margin:.2%}; gross cost = net cost ÷ (1 − margin)."
+    )
 
     selected_inventory_ids = list(dict.fromkeys(a.inventory_id for a in selected if a.inventory_id))
     relevant_inventories = [inventories[i] for i in selected_inventory_ids if i in inventories]

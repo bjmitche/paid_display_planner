@@ -1,4 +1,4 @@
-from planner.economics import cost_for_activation, fx_convert
+from planner.economics import cost_for_activation, fx_convert, gross_up_cost
 from planner.models import Activation
 
 
@@ -9,6 +9,10 @@ def activation(cost=100.0):
 def test_activation_cost_is_fully_utilised_and_deterministic():
     assert cost_for_activation(activation()) == 100
     assert cost_for_activation(activation(0)) == 0
+
+
+def test_gross_up_uses_margin_of_gross_cost():
+    assert gross_up_cost(100, 0.2) == 125
 
 
 def test_fx_requires_explicit_non_target_rate():

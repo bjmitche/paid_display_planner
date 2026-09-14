@@ -144,6 +144,12 @@ def cost_for_activation(activation: Activation) -> float:
     return max(activation.cost or 0.0, 0.0)
 
 
+def gross_up_cost(cost: float, agency_margin: float) -> float:
+    if agency_margin < 0 or agency_margin >= 1:
+        raise ValueError("agency margin must be at least 0% and less than 100%")
+    return cost / (1 - agency_margin)
+
+
 def fx_convert(
     amount: float, source_currency: str | None, target_currency: str, rates: dict[str, float]
 ) -> float:
