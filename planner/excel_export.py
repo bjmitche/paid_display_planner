@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.utils import range_boundaries
+from openpyxl.worksheet.filters import AutoFilter
+from openpyxl.worksheet.table import TableColumn
 
 from .economics import estimate_inventory
 from .models import Activation, Campaign, Inventory, Product
@@ -38,25 +40,29 @@ def _write_rows(
             sheet.cell(row, column).value = value
 
 
-def _replace_table(sheet, old_name: str, new_name: str, ref: str) -> None:
-    if old_name in sheet.tables:
-        del sheet.tables[old_name]
-    table = Table(displayName=new_name, ref=ref)
-    table.tableStyleInfo = TableStyleInfo(
-        name="TableStyleMedium2",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False,
-    )
-    sheet.add_table(table)
-
-
 def _set_table_ref(sheet, name: str, ref: str) -> None:
     table = sheet.tables[name]
+    min_col, min_row, max_col, max_row = range_boundaries(ref)
+    start_col = int(min_col)
+    start_row = int(min_row)
+    end_col = int(max_col)
+    headers = [
+        str(sheet.cell(start_row, column).value or f"Column {column}")
+        for column in range(start_col, end_col + 1)
+    ]
+    seen: dict[str, int] = {}
+    unique_headers = []
+    for header in headers:
+        count = seen.get(header, 0) + 1
+        seen[header] = count
+        unique_headers.append(header if count == 1 else f"{header} {count}")
+        if count > 1:
+            sheet.cell(start_row, start_col + len(unique_headers) - 1).value = unique_headers[-1]
     table.ref = ref
-    if table.autoFilter is not None:
-        table.autoFilter.ref = ref
+    table.autoFilter = AutoFilter(ref=ref)
+    table.tableColumns = [
+        TableColumn(id=index, name=header) for index, header in enumerate(unique_headers, 1)
+    ]
 
 
 def _clear_data(sheet, start_row: int, end_row: int, max_column: int) -> None:
@@ -354,9 +360,7 @@ def build_workbook(
             )
     _clear_data(activation_detail, 3, activation_detail.max_row, 19)
     _write_rows(activation_detail, 3, [detail_headers] + detail_rows, 3, 19)
-    _replace_table(
-        activation_detail, "ActivationDetail", "ActivationDetail", f"A3:S{3 + len(detail_rows)}"
-    )
+    _set_table_ref(activation_detail, "ActivationDetail", f"A3:S{3 + len(detail_rows)}")
 
     product_ids = used_product_ids[:3]
     sim_headers = [
@@ -424,9 +428,7 @@ def build_workbook(
         sim_rows.append(values + [None] * (31 - len(values)))
     _clear_data(simulation_detail, 3, simulation_detail.max_row, 31)
     _write_rows(simulation_detail, 3, [sim_headers] + sim_rows, 3, 31)
-    _replace_table(
-        simulation_detail, "SimulationDetail", "SimulationDetail", f"A3:AE{3 + len(sim_rows)}"
-    )
+    _set_table_ref(simulation_detail, "SimulationDetail", f"A3:AE{3 + len(sim_rows)}")
 
     summary["B5"] = campaign.name
     summary["B6"] = "Streamlit scenario"
@@ -531,9 +533,8 @@ def build_workbook(
         35,
         len(activation_performance_headers),
     )
-    _replace_table(
+    _set_table_ref(
         summary,
-        "ActivationPerformance",
         "ActivationPerformance",
         f"A35:P{35 + len(activation_performance_rows)}",
     )

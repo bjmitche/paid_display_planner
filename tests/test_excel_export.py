@@ -83,6 +83,13 @@ def test_build_workbook_populates_template():
         == loaded["Model Inputs & Assumptions"].tables["FXRates"].ref
     )
     assert loaded["Performance Summary"].tables["ActivationPerformance"].ref == "A35:P36"
+    assert loaded["Performance Summary"].tables["ActivationPerformance"].autoFilter.ref == "A35:P36"
+    table_ids = [
+        loaded[sheet].tables[name].id
+        for sheet in loaded.sheetnames
+        for name in loaded[sheet].tables
+    ]
+    assert len(table_ids) == len(set(table_ids))
     assert loaded["Performance Summary"]["D36"].value == "Product"
     assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:S6"
     assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:AE6"
