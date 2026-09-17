@@ -439,25 +439,26 @@ def build_workbook(
     metric_rows = {
         15: ("Impressions", "impressions"),
         16: ("Video views", "views"),
-        18: ("Clicks", "clicks"),
-        20: ("Conversions", "conversions"),
-        21: ("Flows", "flows"),
-        22: ("Cost", "cost"),
-        23: ("Cost per conversion", "cost_per_conversion"),
-        24: ("LTV value", "value"),
-        25: ("ROI", "roi"),
+        17: ("Clicks", "clicks"),
+        18: ("Conversions", "conversions"),
+        19: ("Flows", "flows"),
+        20: ("Cost", "cost"),
+        21: ("Cost per conversion", "cost_per_conversion"),
+        22: ("LTV value", "value"),
+        23: ("ROI", "roi"),
     }
     direction = {"cost": "lower", "cost_per_conversion": "lower"}
-    float_format = "#,##0.00"
+    integer_format = "#,##0"
+    euro_format = f'"{target_currency}"#,##0.00'
     format_by_metric = {
-        "impressions": "#,##0",
-        "views": "#,##0",
-        "clicks": float_format,
-        "conversions": "#,##0",
-        "flows": float_format,
-        "cost": float_format,
-        "cost_per_conversion": float_format,
-        "value": float_format,
+        "impressions": integer_format,
+        "views": integer_format,
+        "clicks": integer_format,
+        "conversions": integer_format,
+        "flows": euro_format,
+        "cost": euro_format,
+        "cost_per_conversion": euro_format,
+        "value": euro_format,
         "roi": "0.00",
     }
     for row, (label, key) in metric_rows.items():
@@ -554,9 +555,9 @@ def build_workbook(
         f"A35:P{35 + len(activation_performance_rows)}",
     )
     for offset in range(len(activation_performance_rows)):
-        summary.cell(36 + offset, 12).number_format = float_format
+        summary.cell(36 + offset, 12).number_format = euro_format
     for product_row in range(29, 32):
-        summary.cell(product_row, 8).number_format = float_format
+        summary.cell(product_row, 8).number_format = euro_format
 
     conversion_bins = _histogram([r["conversions"] for r in campaign_rows])
     roi_bins = _histogram([r["roi"] for r in campaign_rows])
