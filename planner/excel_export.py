@@ -436,19 +436,31 @@ def build_workbook(
     summary["B8"] = len(selected)
     summary["B9"] = len(used_products)
     summary["B10"] = iterations
-    metric_map = {
-        "Impressions": "impressions",
-        "Video views": "views",
-        "Clicks": "clicks",
-        "Conversions": "conversions",
-        "Flows": "flows",
-        "Cost": "cost",
-        "Cost per conversion": "cost_per_conversion",
-        "LTV value": "value",
-        "ROI": "roi",
+    metric_rows = {
+        15: ("Impressions", "impressions"),
+        16: ("Video views", "views"),
+        18: ("Clicks", "clicks"),
+        20: ("Conversions", "conversions"),
+        21: ("Flows", "flows"),
+        22: ("Cost", "cost"),
+        23: ("Cost per conversion", "cost_per_conversion"),
+        24: ("LTV value", "value"),
+        25: ("ROI", "roi"),
     }
     direction = {"cost": "lower", "cost_per_conversion": "lower"}
-    for row, (label, key) in enumerate(metric_map.items(), 15):
+    float_format = "#,##0.00"
+    format_by_metric = {
+        "impressions": "#,##0",
+        "views": "#,##0",
+        "clicks": float_format,
+        "conversions": "#,##0",
+        "flows": float_format,
+        "cost": float_format,
+        "cost_per_conversion": float_format,
+        "value": float_format,
+        "roi": "0.00",
+    }
+    for row, (label, key) in metric_rows.items():
         values = [r[key] for r in campaign_rows] or [0]
         q1, med, q3 = _quartile(values, 0.25), _quartile(values, 0.5), _quartile(values, 0.75)
         summary.cell(row, 1).value = label
@@ -458,6 +470,9 @@ def build_workbook(
         summary.cell(row, 5).value = (
             "Lower is better" if direction.get(key) == "lower" else "Higher is better"
         )
+        number_format = format_by_metric[key]
+        for column in (2, 3, 4):
+            summary.cell(row, column).number_format = number_format
 
     activation_performance_headers = [
         "Activation name",
@@ -538,6 +553,10 @@ def build_workbook(
         "ActivationPerformance",
         f"A35:P{35 + len(activation_performance_rows)}",
     )
+    for offset in range(len(activation_performance_rows)):
+        summary.cell(36 + offset, 12).number_format = float_format
+    for product_row in range(29, 32):
+        summary.cell(product_row, 8).number_format = float_format
 
     conversion_bins = _histogram([r["conversions"] for r in campaign_rows])
     roi_bins = _histogram([r["roi"] for r in campaign_rows])

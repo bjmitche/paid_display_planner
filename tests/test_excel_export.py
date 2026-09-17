@@ -90,14 +90,16 @@ def test_build_workbook_populates_template():
         for name in loaded[sheet].tables
     ]
     assert len(table_ids) == len(set(table_ids))
-    assert loaded["Performance Summary"]["D36"].value == "Product"
+    assert loaded["Performance Summary"]["A18"].value == "Clicks"
+    assert loaded["Performance Summary"]["A21"].value == "Flows"
+    assert loaded["Performance Summary"]["B18"].number_format == "#,##0.00"
+    assert loaded["Performance Summary"]["C21"].number_format == "#,##0.00"
+    assert loaded["Performance Summary"]["L36"].number_format == "#,##0.00"
     assert loaded["Activation Detail"].tables["ActivationDetail"].ref == "A3:S6"
     assert loaded["Simulation Detail"].tables["SimulationDetail"].ref == "A3:AE6"
     assert sum(loaded["Performance Summary"].cell(row, 4).value for row in range(85, 105)) == 3
     assert sum(loaded["Performance Summary"].cell(row, 9).value for row in range(85, 105)) == 3
-    assert (
-        loaded["Performance Summary"]["B24"].value == "=QUARTILE('Simulation Detail'!$H$4:$H$503,1)"
-    )
-    assert (
-        loaded["Performance Summary"]["C25"].value == "=QUARTILE('Simulation Detail'!$I$4:$I$503,2)"
-    )
+    assert loaded["Performance Summary"]["B24"].value == 20
+    assert loaded["Performance Summary"]["C25"].value == 0.2
+    assert loaded["Performance Summary"]["B18"].number_format == "#,##0.00"
+    assert loaded["Performance Summary"]["C21"].number_format == "#,##0.00"
