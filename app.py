@@ -16,6 +16,7 @@ from planner.models import (
     normalise_product,
 )
 from planner.notion_client import DEFAULT_DATA_SOURCE_IDS, client_from_values
+from planner.selection import resolve_choice_index
 from planner.simulation import SimulationInputs, simulate_activation, summarise
 from planner.validation import validate_snapshot
 
@@ -335,10 +336,12 @@ for activation in selected:
     chosen_product = card.selectbox(
         f"Product for {activation.name}",
         product_names,
-        index=default_index,
-        key=f"product_{activation.id}",
+        index=default_index if product_names else 0,
+        key=product_widget_key,
     )
-    product = product_options[product_names.index(chosen_product)]
+    if not product_options:
+        continue
+    product = product_options[resolve_choice_index(chosen_product, product_names, default_index)]
     product = product_overrides.get(product.id) or product
     product_by_activation[activation.id] = product
     card.markdown(f"**{activation.name} — conversion assumptions**")
