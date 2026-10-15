@@ -1,4 +1,4 @@
-from planner.selection import resolve_choice_index
+from planner.selection import resolve_choice_index, unique_ids
 
 
 def test_stale_product_name_falls_back_to_default() -> None:
@@ -9,3 +9,7 @@ def test_stale_product_name_falls_back_to_default() -> None:
 def test_valid_product_name_keeps_its_index() -> None:
     names = ["Current Account", "Credit Card"]
     assert resolve_choice_index("Credit Card", names, default_index=0) == 1
+
+
+def test_unique_ids_preserve_order() -> None:
+    assert unique_ids(["a", "b", "a", "c"]) == ["a", "b", "c"]

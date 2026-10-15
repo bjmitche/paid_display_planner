@@ -25,6 +25,23 @@ def test_rollup_relation_ids_are_normalised():
     assert campaign.product_ids == ("product-1", "product-2")
 
 
+def test_duplicate_activation_ids_are_deduped():
+    page = {
+        "id": "campaign-1",
+        "properties": {
+            "Campaign name": {"type": "title", "title": [{"plain_text": "Campaign"}]},
+            "Activations": {
+                "type": "relation",
+                "relation": [{"id": "act-1"}, {"id": "act-1"}, {"id": "act-2"}],
+            },
+            "Budget": {"type": "number", "number": 1000},
+            "Budget currency": {"type": "select", "select": {"name": "GBP"}},
+        },
+    }
+    campaign = normalise_campaign(page)
+    assert campaign.activation_ids == ("act-1", "act-2")
+
+
 def test_product_holding_period_is_loaded_from_holding_period():
     product = normalise_product(
         {

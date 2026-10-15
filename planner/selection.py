@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+
+
+def unique_ids(values: Iterable[object]) -> list[object]:
+    return list(dict.fromkeys(values))
 
 
 def resolve_choice_index(

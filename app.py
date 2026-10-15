@@ -16,7 +16,7 @@ from planner.models import (
     normalise_product,
 )
 from planner.notion_client import DEFAULT_DATA_SOURCE_IDS, client_from_values
-from planner.selection import resolve_choice_index
+from planner.selection import resolve_choice_index, unique_ids
 from planner.simulation import SimulationInputs, simulate_activation, summarise
 from planner.validation import validate_snapshot
 
@@ -141,7 +141,7 @@ agency_margin_pct = st.number_input(
     help="Gross-up applied to media cost: gross cost = net cost ÷ (1 − margin).",
 )
 agency_margin = agency_margin_pct / 100
-base_ids = [item_id for item_id in campaign.activation_ids if item_id in activation_map]
+base_ids = unique_ids(item_id for item_id in campaign.activation_ids if item_id in activation_map)
 scenario_activations = st.session_state.setdefault("scenario_activations", [])
 all_activation_map = {**activation_map, **{item.id: item for item in scenario_activations}}
 
@@ -156,12 +156,15 @@ if st.button("Add Inventory item to scenario"):
     scenario_activations.append(add_scenario_activation(scenario_inventory, next_number))
     st.rerun()
 
-available_ids = base_ids + [item.id for item in scenario_activations]
-selected_ids = st.multiselect(
-    "Activations included in this scenario",
-    available_ids,
-    default=available_ids,
-    format_func=lambda item_id: all_activation_map[item_id].name,
+available_ids = unique_ids(base_ids + [item.id for item in scenario_activations])
+selected_ids = unique_ids(
+    st.multiselect(
+        "Activations included in this scenario",
+        available_ids,
+        default=available_ids,
+        format_func=lambda item_id: all_activation_map[item_id].name,
+        key=f"selected_activations_{campaign.id}",
+    )
 )
 selected = [all_activation_map[item_id] for item_id in selected_ids]
 

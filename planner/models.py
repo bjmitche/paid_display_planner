@@ -115,7 +115,7 @@ def normalise_campaign(page: dict[str, Any]) -> Campaign:
     return Campaign(
         page["id"],
         p.get("Campaign name") or p.get("Name") or page["id"],
-        tuple(p.get("Activations") or []),
+        tuple(dict.fromkeys(p.get("Activations") or [])),
         p.get("Stage"),
         _number(p.get("Budget")),
         p.get("Budget currency"),
